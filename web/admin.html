@@ -209,7 +209,11 @@ function renderState(d) {
   const byPrize = d.stats.by_prize || {};
   const nameOf = (id) => (id === "thanks" ? "🙏 谢谢参与" : (d.prizes.find((p) => p.id === id) || {}).name || id);
   const entries = Object.entries(byPrize).sort((a, b) => b[1] - a[1]);
-  grid.innerHTML = `<div class="stat"><b>${d.stats.total_draws}</b><span>累计抽奖</span></div>` +
+  const totalRemaining = d.prizes.reduce((s, p) => s + p.remaining, 0);
+  const totalStock = d.prizes.reduce((s, p) => s + p.total_stock, 0);
+  grid.innerHTML =
+    `<div class="stat"><b>${totalRemaining}</b><span>奖品总余量 / 共 ${totalStock} 份</span></div>` +
+    `<div class="stat"><b>${d.stats.total_draws}</b><span>累计抽奖</span></div>` +
     entries.map(([id, n]) => `<div class="stat"><b>${n}</b><span>${nameOf(id)}</span></div>`).join("");
   if (!entries.length) grid.innerHTML += `<div class="stat"><b>0</b><span>还没有人抽过</span></div>`;
 }

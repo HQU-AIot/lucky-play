@@ -33,6 +33,17 @@ app = FastAPI(title="Lucky Play 抽奖系统", docs_url=None, redoc_url=None)
 # 权重上限：防止 Infinity/NaN 落库后毒化数据库（抽奖与后台接口将持久 500）
 WeightValue = Annotated[float, Field(ge=0, le=100000, allow_inf_nan=False)]
 
+STATIC_PREFIXES = ("/css", "/js", "/assets", "/", "/admin")
+
+
+@app.middleware("http")
+async def revalidate_static(request: Request, call_next):
+    """页面与静态资源每次强制 revalidate（无缓存头时浏览器启发式缓存会吞掉更新）。"""
+    response = await call_next(request)
+    if any(request.url.path == p or request.url.path.startswith(p + "/") for p in STATIC_PREFIXES):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
+
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):

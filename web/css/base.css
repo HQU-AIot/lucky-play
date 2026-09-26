@@ -96,20 +96,16 @@ button { font-family: inherit; }
 
 .layout {
   position: relative; z-index: 1;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 330px;
-  gap: 22px;
-  align-items: start;
-  padding: 14px clamp(16px, 4vw, 44px) 48px;
-  max-width: 1280px;
+  max-width: 1120px;
   margin: 0 auto;
+  padding: 14px clamp(16px, 4vw, 44px) 48px;
   width: 100%;
 }
 
 .stage {
-  min-height: 560px;
+  min-height: 700px;
   display: grid; place-items: center;
-  padding: 28px 18px;
+  padding: 34px 24px;
   border-radius: var(--radius-lg);
   background: var(--stage-bg);
   border: 1px solid var(--line);
@@ -117,60 +113,6 @@ button { font-family: inherit; }
   position: relative;
   overflow: hidden;
 }
-
-.rail { display: grid; gap: 18px; align-self: stretch; }
-
-.panel {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--card-shadow);
-  padding: 18px 18px 14px;
-}
-
-.panel-head {
-  display: flex; align-items: baseline; justify-content: space-between;
-  margin-bottom: 12px;
-}
-.panel-head h2 {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 17px; font-weight: 800; letter-spacing: .06em;
-}
-.stock-total { font-size: 13px; color: var(--ink-dim); }
-.stock-total b { color: var(--accent); font-size: 15px; }
-
-.stock-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.stock-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 8px 10px;
-  border-radius: var(--radius);
-  background: var(--row-bg);
-  border: 1px solid var(--line);
-  transition: opacity .3s ease;
-}
-.stock-item .s-emoji { font-size: 20px; flex: none; }
-.stock-item .s-name { font-size: 14px; font-weight: 600; flex: 1; min-width: 0; }
-.stock-item .s-count { font-family: var(--font-utility, var(--font-body)); font-size: 13px; color: var(--ink-dim); white-space: nowrap; }
-.stock-item .s-count b { color: var(--ink); }
-.stock-item.is-empty { opacity: .45; }
-.stock-item.is-empty .s-count::after { content: " · 已抽完"; color: var(--accent); }
-
-.log-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 300px; overflow: auto; }
-.log-list li {
-  font-size: 13px;
-  padding: 7px 10px;
-  border-radius: var(--radius);
-  background: var(--row-bg);
-  border: 1px solid var(--line);
-  display: flex; justify-content: space-between; gap: 8px;
-  animation: log-in .4s ease both;
-}
-.log-list li.log-empty { color: var(--ink-dim); justify-content: center; background: none; border-style: dashed; }
-.log-list .log-ts { color: var(--ink-dim); font-family: var(--font-utility, var(--font-body)); font-size: 12px; white-space: nowrap; }
-.log-list li.is-win { border-color: var(--accent); }
-
-@keyframes log-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 
 /* ---------- 覆盖层（风格/玩法选择） ---------- */
 
@@ -305,7 +247,7 @@ button { font-family: inherit; }
 
 .wheel-wrap {
   position: relative;
-  width: min(500px, 92vw);
+  width: min(600px, 92vw);
   aspect-ratio: 1;
   margin: 0 auto;
 }
@@ -348,7 +290,7 @@ button { font-family: inherit; }
 .wheel-hub:hover:not(:disabled) { transform: translate(-50%, -50%) scale(1.05); }
 .wheel-hub:disabled { cursor: wait; filter: saturate(.6) brightness(.9); }
 .wheel-hub:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
-.stage-hint { margin-top: 20px; font-size: 13px; color: var(--ink-dim); text-align: center; position: absolute; bottom: 16px; }
+.stage-hint { margin-top: 22px; font-size: 13px; color: var(--ink-dim); text-align: center; }
 
 /* ---------- 形式二：九宫格 ---------- */
 
@@ -544,19 +486,11 @@ button { font-family: inherit; }
 
 /* ---------- 响应式 ---------- */
 
-@media (max-width: 1020px) {
-  .layout { grid-template-columns: 1fr; }
-  .stage { min-height: 480px; }
-  .rail { grid-template-columns: 1fr 1fr; }
-}
 @media (max-width: 640px) {
-  .rail { grid-template-columns: 1fr; }
-  .stage { min-height: 420px; padding: 22px 12px; }
+  .stage { min-height: 460px; padding: 22px 12px; }
   .wheel-hub { width: 88px; height: 88px; font-size: 20px; }
-  .log-list { max-height: 200px; }
   .topbar { padding-top: 14px; }
-  /* 窄屏时提示文字改随流布局，避免压住格子 */
-  .stage-hint, .blindbox-cta, .flip-cta { position: static; margin-top: 14px; }
+  .stage-hint, .blindbox-cta, .flip-cta { margin-top: 14px; }
   .wheel-box, .grid9-box, .blindbox-box, .flip-box { display: flex; flex-direction: column; align-items: center; }
 }
 

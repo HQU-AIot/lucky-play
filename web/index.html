@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <title>幸运抽奖</title>
-<link rel="stylesheet" href="/css/base.css">
-<link rel="stylesheet" href="/css/themes.css">
+<link rel="stylesheet" href="/css/base.css?v=2">
+<link rel="stylesheet" href="/css/themes.css?v=2">
 </head>
 <body data-theme="festive" data-form="wheel">
 
@@ -37,22 +37,6 @@
 
 <main class="layout">
   <section class="stage" id="stage" aria-label="抽奖区"></section>
-
-  <aside class="rail">
-    <section class="panel">
-      <header class="panel-head">
-        <h2>奖品与余量</h2>
-        <span class="stock-total" id="stock-total"></span>
-      </header>
-      <ul class="stock-list" id="stock-list"></ul>
-    </section>
-    <section class="panel panel-log">
-      <header class="panel-head"><h2>本场战绩</h2></header>
-      <ul class="log-list" id="log-list">
-        <li class="log-empty">暂无记录，等你抽走第一份好运</li>
-      </ul>
-    </section>
-  </aside>
 </main>
 
 <div class="overlay" id="overlay-theme" hidden>
@@ -92,6 +76,6 @@
 
 <canvas class="confetti-canvas" id="confetti" aria-hidden="true"></canvas>
 
-<script type="module" src="/js/app.js"></script>
+<script type="module" src="/js/app.js?v=2"></script>
 </body>
 </html>

@@ -60,40 +60,15 @@ function updateCountdown() {
   el.textContent = days > 1 ? `距开奖还有 ${days} 天` : days === 1 ? "明天开奖！" : days === 0 ? "今天开奖！" : "开奖日已过";
 }
 
-async function refreshStock(quiet = true) {
+async function loadPrizes() {
   try {
     const data = await api.prizes();
     state.prizes = data.prizes;
-    $("#stock-total").innerHTML = `共剩 <b>${data.total_remaining}</b> 份`;
-    const list = $("#stock-list");
-    list.innerHTML = "";
-    for (const p of data.prizes) {
-      const li = document.createElement("li");
-      li.className = "stock-item" + (p.remaining === 0 ? " is-empty" : "");
-      li.innerHTML = `<span class="s-emoji">${p.emoji}</span><span class="s-name">${p.name}</span>
-        <span class="s-count"><b>${p.remaining}</b>/${p.total}</span>`;
-      list.appendChild(li);
-    }
-    if (!quiet) fx.toast(`奖品余量已刷新，还剩 ${data.total_remaining} 份`);
   } catch {
-    if (!quiet) fx.toast("余量刷新失败，稍后再试");
+    /* 数据未就绪时形式模块会在 lucky:prizes 到达后重绘 */
   } finally {
     window.dispatchEvent(new CustomEvent("lucky:prizes"));
   }
-}
-
-function addLog(result) {
-  const list = $("#log-list");
-  const empty = list.querySelector(".log-empty");
-  if (empty) empty.remove();
-  const win = result.result === "prize";
-  const li = document.createElement("li");
-  if (win) li.classList.add("is-win");
-  const time = new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
-  li.innerHTML = `<span>${win ? result.prize.emoji + " " + result.prize.name : "🙏 谢谢参与"}</span>
-    <span class="log-ts">${time}</span>`;
-  list.prepend(li);
-  while (list.children.length > 30) list.lastChild.remove();
 }
 
 /* ---------- 抽奖上下文（交给各形式使用） ---------- */
@@ -118,15 +93,14 @@ const ctx = {
     }
   },
   async reveal(result) {
-    addLog(result);
-    refreshStock();
+    loadPrizes();
     const choice = await fx.showResult(result);
     state.busy = false;
     document.body.classList.remove("is-busy");
     return choice;
   },
   refresh() {
-    refreshStock();
+    loadPrizes();
   },
 };
 
@@ -253,7 +227,7 @@ function init() {
   applyTheme(state.theme, false);
   applyForm(state.form);
   loadMeta();
-  refreshStock();
+  loadPrizes();
 }
 
 init();
