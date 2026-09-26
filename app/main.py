@@ -99,7 +99,7 @@ def get_meta():
         "event_name": cfg.get("event_name", "幸运抽奖"),
         "event_date": cfg.get("event_date", ""),
         "event_note": cfg.get("event_note", ""),
-        "win_stop_at": _safe_float(cfg.get("win_stop_at"), 4.5),
+        "win_stop_at": _safe_float(cfg.get("win_stop_at"), 5.5),
     }
 
 
@@ -181,7 +181,7 @@ def admin_state():
         "thanks_probability": round(probs.get("thanks", 0.0), 4),
         "dynamic_enabled": dyn_enabled,
         "dynamic_mode": dyn_mode,
-        "win_stop_at": _safe_float(store.get_config().get("win_stop_at"), 4.5),
+        "win_stop_at": _safe_float(store.get_config().get("win_stop_at"), 5.5),
         "event": {
             "name": store.get_config().get("event_name", ""),
             "date": store.get_config().get("event_date", ""),

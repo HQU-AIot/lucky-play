@@ -1,9 +1,9 @@
 /* 总调度：主题/玩法切换、抽奖锁、余量与战绩、活动信息。 */
 
-import { api } from "./api.js?v=9";
-import { fx } from "./fx.js?v=9";
-import { music } from "./music.js?v=9";
-import { FORMS } from "./forms/index.js?v=9";
+import { api } from "./api.js?v=10";
+import { fx } from "./fx.js?v=10";
+import { music } from "./music.js?v=10";
+import { FORMS } from "./forms/index.js?v=10";
 
 const THEMES = [
   { id: "festive", name: "红金福运", desc: "中式礼堂红灯笼下的鎏金转盘", swatches: ["#6D1420", "#E8434E", "#F5C451", "#FFF6E5"] },
@@ -65,7 +65,7 @@ const ctx = {
     document.body.classList.add("is-busy");
     try {
       const result = await api.draw();
-      // 结果到手即起播：动画与音乐同一起跑线，4s 处歌喊"停"时各玩法恰好出结果
+      // 结果到手即起播：动画与音乐同一起跑线，5s 处歌喊"停"时各玩法恰好出结果
       music.startRound();
       return result;
     } catch {

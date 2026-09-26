@@ -1,9 +1,9 @@
 /* 形式二：九宫格。3×3 外圈 8 格，高亮圈快→慢（步进间隔按 2.2 次幂曲线拉长），
    走灯总时长归一化为 RESULT_AT−定格 时长（与结果格远近无关），
-   精准停在结果格，定格脉冲 + 中奖呼吸灯，4s 卡准歌里的"停"。 */
+   精准停在结果格，定格脉冲 + 中奖呼吸灯，5s 卡准歌里的"停"。 */
 
 import { sleep } from "../easing.js";
-import { RESULT_AT } from "../music.js?v=9";
+import { RESULT_AT } from "../music.js?v=10";
 
 // DOM 网格位置 0-8（中心为 4）中，顺时针外圈顺序
 const RING = [0, 1, 2, 5, 8, 7, 6, 3];

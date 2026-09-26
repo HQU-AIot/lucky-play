@@ -1,15 +1,15 @@
 /* 形式六：扭蛋机。大机身（玻璃球舱满舱彩球 + 反光、出货口、投币口、品牌牌）。
    彩球带轻量 2D 物理：重力、球间碰撞、桶壁反弹——摇柄搅动、掉蛋震舱、点玻璃逗球；
    转旋钮 → 彩球翻滚 → 扭蛋掉落弹跳 → 摇晃蓄力 → 壳盖旋飞、奖品弹出。
-   时长对齐音乐：摇柄 2.2s + 落地 .55s + 蓄力 .5s，开壳恰在 RESULT_AT=4s"停"。 */
+   时长对齐音乐：摇柄 3.08s + 落地 .55s + 蓄力 .5s，~4.1s 开壳，展示至 RESULT_AT=5s"停"时弹窗出场。 */
 
 import { sleep, rand } from "../easing.js";
-import { RESULT_AT } from "../music.js?v=9";
+import { RESULT_AT } from "../music.js?v=10";
 
 // 真实扭蛋球的鲜艳塑料色，不随主题变化
 const BALL_COLORS = ["#FF5A5F", "#FFD166", "#4CC9F0", "#06D6A0", "#F78CDB", "#F7F7F7"];
 const BALL_COUNT = 15;
-const CRANK_MS = 2200;  // 摇柄时长（与哒哒声循环对齐）
+const CRANK_MS = 3080;  // 摇柄时长（220ms × 14 拍哒哒声整循环）
 const LAND_MS = 550;    // 扭蛋滚出+落地动画时长（WAAPI 关键帧内含落地挤压）
 const QUIVER_MS = 500;  // 开壳前蓄力摇晃
 
@@ -217,7 +217,7 @@ export function mount(stage, ctx) {
     running = true;
     knob.disabled = true;
 
-    // 1. 旋钮转动 + 球舱抖动 + 彩球被真实搅动翻滚 + 哒哒声（陪唱 2.2s）
+    // 1. 旋钮转动 + 球舱抖动 + 彩球被真实搅动翻滚 + 哒哒声（陪唱 3.08s）
     if (!ctx.reduced) {
       machine.classList.add("is-cranking");
       knob.animate(
@@ -230,7 +230,7 @@ export function mount(stage, ctx) {
       jolt(1.6); // 起手猛搅一记，彩球腾空互撞
       for (let i = 0; i < CRANK_MS / 220; i++) {
         ctx.fx.sound.tick(0.3 + i * 0.05);
-        if (i === 3 || i === 6) jolt(0.8); // 中途再补两记搅动
+        if (i === 3 || i === 6 || i === 10) jolt(0.8); // 中途再补三记搅动
         await sleep(220);
       }
       machine.classList.remove("is-cranking");
@@ -265,7 +265,7 @@ export function mount(stage, ctx) {
       egg.classList.remove("is-quiver");
     }
 
-    // 4. 开壳：上盖旋飞，奖品弹出 —— 开壳瞬间正是歌里的"停"
+    // 4. 开壳：上盖旋飞，奖品弹出（~4.1s），补足展示至 5s"停"时弹窗出场
     egg.classList.add("is-open");
     if (!ctx.reduced) {
       const r = egg.getBoundingClientRect();

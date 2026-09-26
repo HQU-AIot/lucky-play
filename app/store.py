@@ -28,7 +28,7 @@ DEFAULT_CONFIG = {
     "thanks_weight": "9",
     "dynamic_enabled": "1",
     "dynamic_mode": DYNAMIC_PER_WIN,
-    "win_stop_at": "4.5",
+    "win_stop_at": "5.5",
     "event_name": "幸运抽奖",
     "event_date": "2026-09-30",
     "event_note": "国庆前一天 · 好运相逢",

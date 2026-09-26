@@ -119,7 +119,7 @@
       <button id="ws-preview-stop" class="ghost" hidden>⏹ 停止试听</button>
     </div>
     <p class="note">试听会从头播放整曲，并在设置的秒数处直接停止——中奖观众听到的就是这一刀。
-      建议卡在"停"字唱完的位置（约 4.3 - 4.5 秒）；保存后前台刷新即可生效。</p>
+      建议卡在"停"字唱完的位置（约 5.3 - 5.5 秒）；保存后前台刷新即可生效。</p>
   </div>
 
   <div class="card">
@@ -304,7 +304,7 @@ $("#ws-preview").addEventListener("click", () => {
   const v = Number($("#win-stop").value);
   if (!(v >= 0.5 && v <= 8)) { flash("#ws-msg", "请先填 0.5 - 8 之间的秒数", false); return; }
   stopPreview();
-  previewAudio = new Audio("/assets/lucky-song.mp3?v=9");
+  previewAudio = new Audio("/assets/lucky-song.mp3?v=10");
   previewAudio.onended = () => stopPreview();
   previewAudio.play().catch(() => { flash("#ws-msg", "浏览器拦截了播放，再点一次", false); });
   // 精确定时器到点即停（timeupdate 粒度 15-250ms，太粗）

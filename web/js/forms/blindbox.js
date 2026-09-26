@@ -1,10 +1,10 @@
-/* 形式三：盲盒。三只盒子点选其一 → 长蓄力摇晃（振幅渐增，陪唱满 2.6s）→
-   盖子弹飞 + 原地迸彩带 → 奖品 spring 弹出。4s 卡准歌里的"停"。 */
+/* 形式三：盲盒。三只盒子点选其一 → 长蓄力摇晃（振幅渐增，陪唱满 3.4s）→
+   盖子弹飞 + 原地迸彩带 → 奖品 spring 弹出。5s 卡准歌里的"停"。 */
 
 import { sleep, rand } from "../easing.js";
-import { RESULT_AT } from "../music.js?v=9";
+import { RESULT_AT } from "../music.js?v=10";
 
-const SHAKE_MS = 2600; // 摇晃蓄力 = RESULT_AT − 开盖后展示时长
+const SHAKE_MS = 3400; // 摇晃蓄力 = RESULT_AT − 开盖后展示时长
 
 export function mount(stage, ctx) {
   stage.innerHTML = `
@@ -93,7 +93,7 @@ export function mount(stage, ctx) {
       const rect = box.getBoundingClientRect();
       ctx.fx.confetti.burstAt(rect.left + rect.width / 2, rect.top + rect.height * 0.35);
     }
-    // 开盖后展示到 4s 整：歌里的"停"响起时奖品恰好完全亮相
+    // 开盖后展示到 5s 整：歌里的"停"响起时奖品恰好完全亮相
     await sleep(ctx.reduced ? 150 : RESULT_AT * 1000 - SHAKE_MS);
 
     const choice = await ctx.reveal(result);

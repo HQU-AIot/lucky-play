@@ -200,13 +200,13 @@ def test_replenish_all():
 
 
 def test_win_stop_at_config_and_validation():
-    """中奖收刀点：默认 4.5s，后台可调，越界拒绝，非法存量回退默认。"""
+    """中奖收刀点：默认 5.5s，后台可调，越界拒绝，非法存量回退默认。"""
     meta = client.get("/api/meta").json()
-    assert meta["win_stop_at"] == 4.5
+    assert meta["win_stop_at"] == 5.5
     r = client.put("/api/admin/win_stop", headers=TOKEN, json={"value": 3.2})
     assert r.status_code == 200
     assert client.get("/api/meta").json()["win_stop_at"] == 3.2
     assert client.get("/api/admin/state", headers=TOKEN).json()["win_stop_at"] == 3.2
     assert client.put("/api/admin/win_stop", headers=TOKEN, json={"value": 9}).status_code == 422
     assert client.put("/api/admin/win_stop", headers=TOKEN, json={"value": 0.2}).status_code == 422
-    client.put("/api/admin/win_stop", headers=TOKEN, json={"value": 4.5})
+    client.put("/api/admin/win_stop", headers=TOKEN, json={"value": 5.5})

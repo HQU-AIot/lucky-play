@@ -1,11 +1,11 @@
 /* 形式注册表：id ↔ 名称/图标/描述 + 挂载器 */
 
-import * as wheel from "./wheel.js?v=9";
-import * as grid from "./grid.js?v=9";
-import * as blindbox from "./blindbox.js?v=9";
-import * as flip from "./flip.js?v=9";
-import * as slot from "./slot.js?v=9";
-import * as gacha from "./gacha.js?v=9";
+import * as wheel from "./wheel.js?v=10";
+import * as grid from "./grid.js?v=10";
+import * as blindbox from "./blindbox.js?v=10";
+import * as flip from "./flip.js?v=10";
+import * as slot from "./slot.js?v=10";
+import * as gacha from "./gacha.js?v=10";
 
 export const FORMS = {
   wheel: {

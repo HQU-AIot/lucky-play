@@ -1,10 +1,10 @@
 /* 形式四：翻牌。8 张暗牌，翻开哪张哪张就是一次真实抽奖（服务端扣库存）；
    其余牌翻开显示按当前概率真实采样的奖品分布（/api/sample，无副作用）。
-   节奏对齐音乐：虚晃三连 + 主牌蓄力 3.3s，翻面完成恰在 RESULT_AT=4s"停"。 */
+   节奏对齐音乐：虚晃四连 + 主牌蓄力 4.3s，翻面完成恰在 RESULT_AT=5s"停"。 */
 
 import { sleep } from "../easing.js";
-import { api } from "../api.js?v=9";
-import { RESULT_AT } from "../music.js?v=9";
+import { api } from "../api.js?v=10";
+import { RESULT_AT } from "../music.js?v=10";
 
 const FLIP_MS = 700; // 与 base.css .f-inner transition .7s 对齐
 
@@ -66,10 +66,10 @@ export function mount(stage, ctx) {
       setFace(cards[cardIndex], s.emoji, s.name);
     });
 
-    // 虚晃三连：未选中的牌面朝下轻抬示意，陪歌铺垫悬念（逐张等动画播完再停顿）
+    // 虚晃四连：未选中的牌面朝下轻抬示意，陪歌铺垫悬念（逐张等动画播完再停顿）
     if (!ctx.reduced) {
       const decoys = [...others];
-      for (let d = 0; d < 3; d++) {
+      for (let d = 0; d < 4; d++) {
         const j = decoys.splice((Math.random() * decoys.length) | 0, 1)[0];
         await cards[j]
           .animate(
@@ -91,10 +91,10 @@ export function mount(stage, ctx) {
           { transform: "scale(1.05)" },
           { transform: "scale(1)" },
         ],
-        { duration: 660, easing: "ease-in-out" }
+        { duration: 780, easing: "ease-in-out" }
       );
       ctx.fx.sound.tick(0.75);
-      await sleep(660);
+      await sleep(780);
     }
 
     // 翻开主牌 = 开奖；翻面 transition .7s 完成 → 恰好 RESULT_AT"停"

@@ -1,16 +1,16 @@
 /* 背景音乐：《中奖概率倍儿高》（碎碎冰，8.04s 整曲，web/assets/lucky-song.mp3）。
    全部玩法共用一条时间轴：
    - 点击开抽 → api.draw 返回后起播，动画同时开跑；
-   - RESULT_AT = 4.0s（实测响度尖峰，歌里喊"停"）→ 所有玩法此刻落定结果；
+   - RESULT_AT = 5.0s（实听校准，歌里喊"停"）→ 所有玩法此刻落定结果；
    - 没中 → 歌继续唱"没中"+哭声，直到 8s 自然收尾；
    - 中奖 → 歌播到后台配置的 winStopAt 秒处快速收刀（位置由管理员试听调节，
-     默认 4.5s），刀落后接胜利琶音。不做任何人声采样/叠加——干净利落一刀。
+     默认 5.5s），刀落后接胜利琶音。不做任何人声采样/叠加——干净利落一刀。
    音效开关（fx.sound）独立于本开关；prefers-reduced-motion 时不播音乐。 */
 
-export const RESULT_AT = 4.0; // 歌中"停"的时刻 = 各玩法统一出结果时刻（秒）
+export const RESULT_AT = 5.0; // 歌中"停"的时刻 = 各玩法统一出结果时刻（秒）
 export const SONG_END = 8.04; // 整曲时长（秒），仅作语义参考
 
-const SRC = "../assets/lucky-song.mp3?v=9";
+const SRC = "../assets/lucky-song.mp3?v=10";
 const VOLUME = 0.95;
 const FADE_TICK = 25;   // 收刀淡出间隔 ms
 const FADE_STEP = 0.25; // 每帧衰减量：≈0.1s 干脆收刀
@@ -18,7 +18,7 @@ const FADE_STEP = 0.25; // 每帧衰减量：≈0.1s 干脆收刀
 let audio = null;
 let fadeTimer = 0;
 let roundActive = false;
-let winStopAt = 4.5; // 后台可调：中奖时音乐停止位置（秒）
+let winStopAt = 5.5; // 后台可调：中奖时音乐停止位置（秒）
 
 function reducedMotion() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -74,7 +74,7 @@ export const music = {
     return roundActive;
   },
 
-  /** 中奖：歌播到后台配置的 winStopAt 秒处快速收刀（默认 4.5s），收刀完成后回调
+  /** 中奖：歌播到后台配置的 winStopAt 秒处快速收刀（默认 5.5s），收刀完成后回调
       onStopped（接胜利琶音，唯一触发点）。startRound/关闭音乐会取消未落的刀。 */
   winStop(onStopped) {
     if (!audio || !roundActive) {
