@@ -4,7 +4,7 @@
    总时长对齐音乐：RESULT_AT=4s 歌喊"停"时指针落定。 */
 
 import { easeInQuad, easeOutExpo, easeOutCubic, lerp, rand } from "../easing.js";
-import { RESULT_AT } from "../music.js?v=6";
+import { RESULT_AT } from "../music.js?v=9";
 
 const TAU = Math.PI * 2;
 const WINDUP = 0.40;      // 蓄力时长 s
@@ -18,7 +18,7 @@ export function mount(stage, ctx) {
       <div class="wheel-wrap">
         <div class="wheel-outer"></div>
         <canvas class="wheel-canvas"></canvas>
-        <div class="wheel-pointer">▼</div>
+        <div class="wheel-pointer"><i class="ptr-knob"></i><i class="ptr-tip"></i></div>
         <button class="wheel-hub" type="button">开抽</button>
       </div>
       <p class="stage-hint">指针停在哪儿，好运就在哪儿</p>

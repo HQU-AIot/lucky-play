@@ -45,7 +45,7 @@ uv run uvicorn app.main:app --port 8000   # 启动
 | `GET /api/sample?count=7` | 按当前概率采样展示结果（无副作用、不扣库存），供翻牌旁位展示 |
 | `GET /api/meta` | 活动名 / 开奖日期 / 副标 |
 
-后台（请求头 `X-Admin-Token`；默认 `lucky-admin`，环境变量 `LUCKY_ADMIN_TOKEN` 覆盖）：
+后台（请求头 `X-Admin-Token`；默认 `123456`，环境变量 `LUCKY_ADMIN_TOKEN` 覆盖）：
 
 `GET /api/admin/state` · `PUT /api/admin/weights` · `PUT /api/admin/stock` · `PUT /api/admin/dynamic` · `PUT /api/admin/event` · `GET /api/admin/history?limit=` · `POST /api/admin/history/reset` · `POST /api/admin/replenish`
 

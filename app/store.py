@@ -28,12 +28,13 @@ DEFAULT_CONFIG = {
     "thanks_weight": "9",
     "dynamic_enabled": "1",
     "dynamic_mode": DYNAMIC_PER_WIN,
+    "win_stop_at": "4.5",
     "event_name": "幸运抽奖",
     "event_date": "2026-09-30",
     "event_note": "国庆前一天 · 好运相逢",
 }
 
-DEFAULT_ADMIN_TOKEN = "lucky-admin"
+DEFAULT_ADMIN_TOKEN = "123456"
 
 CONFIG_KEYS = set(DEFAULT_CONFIG)
 

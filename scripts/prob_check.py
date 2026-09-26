@@ -285,11 +285,11 @@ def phase_api() -> None:
     # -- sample 无副作用 --
     before = client.get("/api/prizes").json()
     draws_before = client.get("/api/admin/history?limit=1",
-                              headers={"X-Admin-Token": "lucky-admin"}).json()
+                              headers={"X-Admin-Token": "123456"}).json()
     client.get("/api/sample?count=20")
     after = client.get("/api/prizes").json()
     draws_after = client.get("/api/admin/history?limit=1",
-                             headers={"X-Admin-Token": "lucky-admin"}).json()
+                             headers={"X-Admin-Token": "123456"}).json()
     if before != after or draws_before != draws_after:
         fail("/api/sample 产生了副作用（库存或流水变化）")
     else:
@@ -353,7 +353,7 @@ def phase_api() -> None:
 
 def _live_specs(client) -> tuple[list[PrizeSpec], float, bool, str]:
     """从 admin 接口读真实配置构造状态，避免脚本内硬编码权重。"""
-    st = client.get("/api/admin/state", headers={"X-Admin-Token": "lucky-admin"}).json()
+    st = client.get("/api/admin/state", headers={"X-Admin-Token": "123456"}).json()
     specs = [PrizeSpec(p["id"], p["name"], float(p["base_weight"]),
                        int(p["total_stock"]), int(p["remaining"])) for p in st["prizes"]]
     return specs, float(st["thanks_weight"]), bool(st["dynamic_enabled"]), str(st["dynamic_mode"])

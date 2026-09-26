@@ -99,7 +99,16 @@ def get_meta():
         "event_name": cfg.get("event_name", "幸运抽奖"),
         "event_date": cfg.get("event_date", ""),
         "event_note": cfg.get("event_note", ""),
+        "win_stop_at": _safe_float(cfg.get("win_stop_at"), 4.5),
     }
+
+
+def _safe_float(raw, fallback: float) -> float:
+    try:
+        v = float(raw)
+        return v if math.isfinite(v) and 0.5 <= v <= 8 else fallback
+    except (TypeError, ValueError):
+        return fallback
 
 
 @app.get("/api/prizes")
@@ -172,6 +181,7 @@ def admin_state():
         "thanks_probability": round(probs.get("thanks", 0.0), 4),
         "dynamic_enabled": dyn_enabled,
         "dynamic_mode": dyn_mode,
+        "win_stop_at": _safe_float(store.get_config().get("win_stop_at"), 4.5),
         "event": {
             "name": store.get_config().get("event_name", ""),
             "date": store.get_config().get("event_date", ""),
@@ -230,6 +240,17 @@ def admin_dynamic(payload: DynamicIn):
         {"dynamic_enabled": "1" if payload.enabled else "0", "dynamic_mode": payload.mode}
     )
     return {"ok": True}
+
+
+class WinStopIn(BaseModel):
+    value: float = Field(ge=0.5, le=8, allow_inf_nan=False)
+
+
+@app.put("/api/admin/win_stop", dependencies=[Depends(admin_auth)])
+def admin_win_stop(payload: WinStopIn):
+    """中奖时音乐收刀位置（秒）——由管理员试听调节，前台经 /api/meta 读取。"""
+    store.set_config({"win_stop_at": f"{payload.value:.2f}"})
+    return {"ok": True, "win_stop_at": payload.value}
 
 
 class EventIn(BaseModel):

@@ -1,9 +1,9 @@
 /* 总调度：主题/玩法切换、抽奖锁、余量与战绩、活动信息。 */
 
-import { api } from "./api.js?v=6";
-import { fx } from "./fx.js?v=6";
-import { music } from "./music.js?v=6";
-import { FORMS } from "./forms/index.js?v=6";
+import { api } from "./api.js?v=9";
+import { fx } from "./fx.js?v=9";
+import { music } from "./music.js?v=9";
+import { FORMS } from "./forms/index.js?v=9";
 
 const THEMES = [
   { id: "festive", name: "红金福运", desc: "中式礼堂红灯笼下的鎏金转盘", swatches: ["#6D1420", "#E8434E", "#F5C451", "#FFF6E5"] },
@@ -34,31 +34,10 @@ async function loadMeta() {
     state.meta = await api.meta();
     $("#event-name").textContent = state.meta.event_name || "幸运抽奖";
     document.title = state.meta.event_name || "幸运抽奖";
-    $("#event-note").textContent = state.meta.event_note || "";
-    const d = state.meta.event_date;
-    if (d) {
-      const [, m, day] = d.split("-").map(Number);
-      $("#event-date").textContent = `${m} 月 ${day} 日开奖`;
-    } else {
-      $("#event-date").hidden = true;
-    }
-    updateCountdown();
+    music.setWinStopAt(state.meta.win_stop_at);
   } catch {
     /* 首屏元信息失败不阻塞，用默认文案 */
   }
-}
-
-function updateCountdown() {
-  const el = $("#event-countdown");
-  const dateStr = state.meta.event_date;
-  const show = state.theme === "national" && dateStr;
-  if (!show) { el.hidden = true; return; }
-  const target = new Date(`${dateStr}T00:00:00`);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const days = Math.round((target - today) / 86400000);
-  el.hidden = false;
-  el.textContent = days > 1 ? `距开奖还有 ${days} 天` : days === 1 ? "明天开奖！" : days === 0 ? "今天开奖！" : "开奖日已过";
 }
 
 async function loadPrizes() {
@@ -100,8 +79,11 @@ const ctx = {
     loadPrizes();
     const win = result.result === "prize";
     const musicRound = music.isPlaying();
-    if (win) music.winFade(); // "停"唱完整后收刀
-    const choice = await fx.showResult(result, { musicRound, delayFanfare: win && musicRound });
+    // 中奖且音乐在场：歌播到后台配置的收刀点，收刀回调里响琶音——
+    // 琶音只此一处触发（fx 不再自行定时，避免双响叠加）
+    const fanfareByMusic = win && musicRound;
+    if (fanfareByMusic) music.winStop(() => fx.sound.win());
+    const choice = await fx.showResult(result, { musicRound, fanfareByMusic });
     state.busy = false;
     document.body.classList.remove("is-busy");
     return choice;
@@ -125,7 +107,6 @@ function applyTheme(id, announce = true) {
   document.body.dataset.theme = id;
   localStorage.setItem("lucky.theme", id);
   fx.setTheme(id);
-  updateCountdown();
   document.querySelectorAll("#theme-grid .theme-card").forEach((c) =>
     c.classList.toggle("is-active", c.dataset.id === id)
   );

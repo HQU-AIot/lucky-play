@@ -3,7 +3,7 @@
    精准停在结果格，定格脉冲 + 中奖呼吸灯，4s 卡准歌里的"停"。 */
 
 import { sleep } from "../easing.js";
-import { RESULT_AT } from "../music.js?v=6";
+import { RESULT_AT } from "../music.js?v=9";
 
 // DOM 网格位置 0-8（中心为 4）中，顺时针外圈顺序
 const RING = [0, 1, 2, 5, 8, 7, 6, 3];
@@ -73,6 +73,13 @@ export function mount(stage, ctx) {
       cursor = k % 8;
       cells.forEach((c) => c && c.classList.remove("is-lit"));
       const cell = cells[RING[cursor]];
+      // 拖尾：上一格短暂保留余晖，灯圈走起来更有"电流感"
+      const prev = cells[RING[(k - 1) % 8]];
+      if (prev && prev !== cell) {
+        prev.classList.add("is-trail");
+        clearTimeout(prev._trailT);
+        prev._trailT = setTimeout(() => prev.classList.remove("is-trail"), 240);
+      }
       cell.classList.add("is-lit");
       const intensity = 1 - k / steps;
       ctx.fx.sound.tick(0.25 + intensity * 0.6);
@@ -81,6 +88,7 @@ export function mount(stage, ctx) {
     }
 
     const winCell = cells[RING[target]];
+    cells.forEach((c) => c && c.classList.remove("is-trail"));
     winCell.classList.remove("is-lit");
     winCell.classList.add("is-lit", "is-winner");
     await sleep(ctx.reduced ? 100 : HOLD_MS);

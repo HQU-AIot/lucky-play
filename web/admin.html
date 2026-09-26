@@ -67,7 +67,7 @@
 
 <div class="token-gate" id="gate">
   <h1>抽奖后台</h1>
-  <p class="sub">输入管理令牌（默认 lucky-admin，可用环境变量 LUCKY_ADMIN_TOKEN 覆盖）</p>
+  <p class="sub">输入管理令牌（默认 123456，可用环境变量 LUCKY_ADMIN_TOKEN 覆盖）</p>
   <input type="password" id="token-in" placeholder="管理令牌" autocomplete="off">
   <div><button id="token-go">进入</button></div>
   <p class="msg err" id="gate-msg"></p>
@@ -105,6 +105,21 @@
       </div>
     </div>
     <p class="note" id="dyn-explain"></p>
+  </div>
+
+  <div class="card">
+    <h2>中奖音效 <span class="hint">中奖时音乐播到几秒收刀，由你试听决定</span></h2>
+    <div class="row">
+      <div class="field" style="max-width:220px">
+        <label>中奖时音乐停在（秒，0.5 - 8）</label>
+        <input type="number" id="win-stop" min="0.5" max="8" step="0.05">
+      </div>
+      <button id="win-stop-save">保存</button><span class="msg" id="ws-msg"></span>
+      <button id="ws-preview" class="ghost">▶ 试听（到点即停）</button>
+      <button id="ws-preview-stop" class="ghost" hidden>⏹ 停止试听</button>
+    </div>
+    <p class="note">试听会从头播放整曲，并在设置的秒数处直接停止——中奖观众听到的就是这一刀。
+      建议卡在"停"字唱完的位置（约 4.3 - 4.5 秒）；保存后前台刷新即可生效。</p>
   </div>
 
   <div class="card">
@@ -179,6 +194,7 @@ function renderState(d) {
   $("#thanks-weight").value = d.thanks_weight;
   $("#dyn-enabled").value = d.dynamic_enabled ? "1" : "0";
   $("#dyn-mode").value = d.dynamic_mode;
+  $("#win-stop").value = d.win_stop_at;
   $("#dyn-explain").textContent = MODE_TEXT[d.dynamic_mode] || "";
 
   const tbody = $("#prize-rows");
@@ -263,6 +279,43 @@ $("#dyn-save").addEventListener("click", async () => {
     await loadAll();
   } catch (e) { flash("#dyn-msg", "失败：" + e.message, false); }
 });
+
+// ---- 中奖音效：收刀点设置 + 试听 ----
+let previewAudio = null;
+let previewTimer = 0;
+
+function stopPreview() {
+  if (previewTimer) { clearTimeout(previewTimer); previewTimer = 0; }
+  if (previewAudio) { previewAudio.pause(); previewAudio = null; }
+  $("#ws-preview").hidden = false;
+  $("#ws-preview-stop").hidden = true;
+}
+
+$("#win-stop-save").addEventListener("click", async () => {
+  const v = Number($("#win-stop").value);
+  if (!(v >= 0.5 && v <= 8)) { flash("#ws-msg", "请填 0.5 - 8 之间的秒数", false); return; }
+  try {
+    await req("/api/admin/win_stop", { method: "PUT", body: JSON.stringify({ value: v }) });
+    flash("#ws-msg", "已保存，前台刷新生效");
+  } catch (e) { flash("#ws-msg", "失败：" + e.message, false); }
+});
+
+$("#ws-preview").addEventListener("click", () => {
+  const v = Number($("#win-stop").value);
+  if (!(v >= 0.5 && v <= 8)) { flash("#ws-msg", "请先填 0.5 - 8 之间的秒数", false); return; }
+  stopPreview();
+  previewAudio = new Audio("/assets/lucky-song.mp3?v=9");
+  previewAudio.onended = () => stopPreview();
+  previewAudio.play().catch(() => { flash("#ws-msg", "浏览器拦截了播放，再点一次", false); });
+  // 精确定时器到点即停（timeupdate 粒度 15-250ms，太粗）
+  previewTimer = setTimeout(() => {
+    if (previewAudio) stopPreview();
+  }, v * 1000);
+  $("#ws-preview").hidden = true;
+  $("#ws-preview-stop").hidden = false;
+});
+
+$("#ws-preview-stop").addEventListener("click", stopPreview);
 
 $("#w-save").addEventListener("click", async () => {
   try {

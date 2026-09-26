@@ -2,7 +2,7 @@
    盖子弹飞 + 原地迸彩带 → 奖品 spring 弹出。4s 卡准歌里的"停"。 */
 
 import { sleep, rand } from "../easing.js";
-import { RESULT_AT } from "../music.js?v=6";
+import { RESULT_AT } from "../music.js?v=9";
 
 const SHAKE_MS = 2600; // 摇晃蓄力 = RESULT_AT − 开盖后展示时长
 
@@ -72,6 +72,19 @@ export function mount(stage, ctx) {
 
     fillPrize(box, result);
     box.classList.add("is-open");
+    if (!ctx.reduced) {
+      // 盖子被顶飞：抛起翻滚，落在盒旁不再凭空消失
+      const lid = box.querySelector(".box-lid");
+      lid.animate(
+        [
+          { transform: "translate(0,0) rotate(0deg)", opacity: 1 },
+          { transform: "translate(24px,-76px) rotate(-44deg)", opacity: 1, offset: 0.38 },
+          { transform: "translate(56px,-8px) rotate(-98deg)", opacity: 1, offset: 0.72 },
+          { transform: "translate(64px,22px) rotate(-124deg)", opacity: 1 },
+        ],
+        { duration: 640, easing: "cubic-bezier(.32,.6,.5,1)", fill: "forwards" }
+      );
+    }
     boxes.forEach((b, i) => {
       if (i !== index) b.classList.add("is-dim");
     });

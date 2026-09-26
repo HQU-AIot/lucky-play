@@ -3,8 +3,8 @@
    节奏对齐音乐：虚晃三连 + 主牌蓄力 3.3s，翻面完成恰在 RESULT_AT=4s"停"。 */
 
 import { sleep } from "../easing.js";
-import { api } from "../api.js?v=6";
-import { RESULT_AT } from "../music.js?v=6";
+import { api } from "../api.js?v=9";
+import { RESULT_AT } from "../music.js?v=9";
 
 const FLIP_MS = 700; // 与 base.css .f-inner transition .7s 对齐
 

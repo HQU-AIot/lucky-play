@@ -2,34 +2,29 @@
    全部玩法共用一条时间轴：
    - 点击开抽 → api.draw 返回后起播，动画同时开跑；
    - RESULT_AT = 4.0s（实测响度尖峰，歌里喊"停"）→ 所有玩法此刻落定结果；
-   - 没中 → 让歌唱完：~5s "没中"、7.2s 起哭声，直到 8s 收尾；
-   - 中奖 → 让"停"喊完整后快速收歌，不播"没中"。
+   - 没中 → 歌继续唱"没中"+哭声，直到 8s 自然收尾；
+   - 中奖 → 歌播到后台配置的 winStopAt 秒处快速收刀（位置由管理员试听调节，
+     默认 4.5s），刀落后接胜利琶音。不做任何人声采样/叠加——干净利落一刀。
    音效开关（fx.sound）独立于本开关；prefers-reduced-motion 时不播音乐。 */
 
 export const RESULT_AT = 4.0; // 歌中"停"的时刻 = 各玩法统一出结果时刻（秒）
 export const SONG_END = 8.04; // 整曲时长（秒），仅作语义参考
 
-const SRC = "../assets/lucky-song.mp3?v=6";
+const SRC = "../assets/lucky-song.mp3?v=9";
 const VOLUME = 0.95;
-const FADE_STEP = 0.2;  // 每帧衰减量，25ms 间隔：≈0.11s 快速收刀
-// 中奖收刀时机：reveal ≈ 音乐 4.03s，+0.48s = 4.51s，正落进歌里 4.52-4.58 的
-// 天然停顿口——"停"（3.94-4.32s 音节）完整唱完后才切，且绝不漏 4.76s 起的"没中"
-const WIN_CUT_DELAY = 480;
+const FADE_TICK = 25;   // 收刀淡出间隔 ms
+const FADE_STEP = 0.25; // 每帧衰减量：≈0.1s 干脆收刀
 
 let audio = null;
 let fadeTimer = 0;
-let fadeDelay = 0;
 let roundActive = false;
+let winStopAt = 4.5; // 后台可调：中奖时音乐停止位置（秒）
 
 function reducedMotion() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
 function stopFade() {
-  if (fadeDelay) {
-    clearTimeout(fadeDelay);
-    fadeDelay = 0;
-  }
   if (fadeTimer) {
     clearInterval(fadeTimer);
     fadeTimer = 0;
@@ -48,6 +43,13 @@ export const music = {
     audio.addEventListener("ended", () => { roundActive = false; });
     audio.load();
   },
+
+  /** 后台 /api/meta 下发的中奖收刀位置（秒）。 */
+  setWinStopAt(v) {
+    const n = Number(v);
+    if (Number.isFinite(n) && n >= 0.5 && n <= 8) winStopAt = n;
+  },
+
 
   /** 每轮开始时调用（须处于点击引发的调用链内，浏览器才放行播放）。
       reduced 实时读取：系统偏好中途变更无需刷新页面即生效。 */
@@ -72,27 +74,32 @@ export const music = {
     return roundActive;
   },
 
-  /** 中奖：让 4.0s 的"停"完整喊出来（延 0.48s 落进歌的停顿口再收刀），
-      快速淡出确保绝不漏出 4.76s 起的"没中"。 */
-  winFade() {
-    if (!audio || !roundActive) return;
+  /** 中奖：歌播到后台配置的 winStopAt 秒处快速收刀（默认 4.5s），收刀完成后回调
+      onStopped（接胜利琶音，唯一触发点）。startRound/关闭音乐会取消未落的刀。 */
+  winStop(onStopped) {
+    if (!audio || !roundActive) {
+      onStopped?.();
+      return;
+    }
     roundActive = false;
     stopFade();
     const a = audio;
-    fadeDelay = setTimeout(() => {
-      fadeDelay = 0;
+    const waitMs = Math.max(0, (winStopAt - a.currentTime) * 1000);
+    fadeTimer = setTimeout(() => {
+      fadeTimer = 0;
       let v = a.volume;
       fadeTimer = setInterval(() => {
         v -= FADE_STEP;
-        if (v <= 0.03) {
+        if (v <= 0.05) {
           stopFade();
           a.pause();
           a.volume = VOLUME; // 复位，下一轮从正常音量起播
+          onStopped?.();
         } else {
           a.volume = v;
         }
-      }, 25);
-    }, WIN_CUT_DELAY);
+      }, FADE_TICK);
+    }, waitMs);
   },
 
   /** 调试/测试用：底层 audio 元素只读访问。 */

@@ -4,7 +4,7 @@
    时长对齐音乐：末轮停定回弹后在 RESULT_AT=4s"停"齐开奖。 */
 
 import { easeOutCubic, rand, sleep } from "../easing.js";
-import { RESULT_AT } from "../music.js?v=6";
+import { RESULT_AT } from "../music.js?v=9";
 
 const CELLS = 24;
 const CELL_FALLBACK_H = 150;

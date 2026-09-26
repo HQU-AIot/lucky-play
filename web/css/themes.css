@@ -348,12 +348,12 @@
 [data-theme="pixel"] .g-cell.is-lit .g-name,
 [data-theme="pixel"] .g-cell.is-lit .g-emoji { color: #1A1C2C; }
 [data-theme="pixel"] .btn-primary { box-shadow: 0 5px 0 #A01035; border-radius: 0; }
-[data-theme="pixel"] .wheel-hub { border-radius: 0; border-width: 4px; }
-[data-theme="pixel"] .wheel-pointer { filter: none; text-shadow: 3px 3px 0 rgba(0,0,0,.4); }
+/* 转盘中心全主题保持圆形（像素风仅指针做像素化处理） */
+[data-theme="pixel"] .wheel-hub { border-width: 4px; }
+[data-theme="pixel"] .wheel-pointer { filter: drop-shadow(3px 3px 0 rgba(0,0,0,.4)); }
+[data-theme="pixel"] .wheel-pointer .ptr-knob { border-radius: 0; border-color: #FFEC27; }
+[data-theme="pixel"] .wheel-pointer .ptr-tip { border-top-color: #FFEC27; }
 [data-theme="pixel"] .reveal-emoji { filter: drop-shadow(4px 4px 0 rgba(0,0,0,.4)); }
-
-/* national：五角星指针 */
-[data-theme="national"] .wheel-pointer { color: #FFDE00; }
 
 /* macaron：果冻按钮 */
 [data-theme="macaron"] .btn-primary:active,
@@ -366,8 +366,9 @@
   100% { transform: scale(1, 1); }
 }
 
-/* festive / national：指针金色 */
-[data-theme="festive"] .wheel-pointer { color: #F5C451; }
+/* festive：指针金色点缀 */
+[data-theme="festive"] .wheel-pointer .ptr-knob { border-color: #F5C451; }
+[data-theme="festive"] .wheel-pointer .ptr-tip { border-top-color: #F5C451; }
 [data-theme="festive"] .g-cell.is-lit .g-name { color: #FFF6E5; }
 [data-theme="national"] .g-cell.is-lit .g-name { color: #5E0A16; }
 [data-theme="national"] .g-cell.is-lit .g-emoji { filter: none; }
