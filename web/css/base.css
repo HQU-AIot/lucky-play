@@ -247,7 +247,7 @@ button { font-family: inherit; }
 
 .wheel-wrap {
   position: relative;
-  width: min(600px, 92vw);
+  width: min(680px, 92vw, 76vh);
   aspect-ratio: 1;
   margin: 0 auto;
 }
@@ -276,13 +276,13 @@ button { font-family: inherit; }
   position: absolute; left: 50%; top: 50%;
   transform: translate(-50%, -50%);
   z-index: 4;
-  width: 108px; height: 108px;
+  width: 124px; height: 124px;
   border-radius: 50%;
   border: 4px solid var(--hub-ring, rgba(255,255,255,.75));
   background: var(--btn-bg);
   color: var(--btn-ink);
   font-family: var(--font-display);
-  font-size: 24px; font-weight: 900; letter-spacing: .12em; text-indent: .12em;
+  font-size: 27px; font-weight: 900; letter-spacing: .12em; text-indent: .12em;
   cursor: pointer;
   box-shadow: 0 8px 26px rgba(0,0,0,.35), inset 0 -4px 10px rgba(0,0,0,.2);
   transition: transform .15s ease, filter .2s ease;
@@ -297,8 +297,8 @@ button { font-family: inherit; }
 .grid9 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  width: min(440px, 92vw);
+  gap: 14px;
+  width: min(560px, 92vw, 66vh);
   aspect-ratio: 1;
 }
 .g-cell {
@@ -339,7 +339,7 @@ button { font-family: inherit; }
 .box-row { display: flex; gap: clamp(14px, 4vw, 30px); align-items: flex-end; justify-content: center; }
 .box {
   position: relative;
-  width: clamp(96px, 22vw, 132px);
+  width: clamp(118px, 24vw, 166px);
   aspect-ratio: 1 / 1.08;
   cursor: pointer;
   border: none; background: none; padding: 0;
@@ -407,7 +407,7 @@ button { font-family: inherit; }
 
 /* ---------- 形式四：翻牌 ---------- */
 
-.card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(10px, 2.5vw, 16px); width: min(480px, 92vw); }
+.card-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(12px, 2.5vw, 18px); width: min(660px, 92vw); }
 .f-card {
   display: block;
   perspective: 1100px;
@@ -451,6 +451,180 @@ button { font-family: inherit; }
 .f-card:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: var(--radius); }
 
 .flip-cta { margin-top: 22px; text-align: center; font-size: 14px; color: var(--ink-dim); letter-spacing: .1em; }
+
+/* ---------- 形式五：老虎机 ---------- */
+
+.slot-machine {
+  width: min(680px, 92vw);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--card-shadow);
+  padding: 20px clamp(14px, 3vw, 28px) 24px;
+  text-align: center;
+}
+.slot-marquee {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(15px, 2.2vw, 19px);
+  letter-spacing: .3em; text-indent: .3em;
+  color: var(--btn-ink);
+  background: var(--btn-bg);
+  border-radius: var(--radius-btn);
+  padding: 7px 22px;
+  box-shadow: var(--btn-shadow);
+  margin-bottom: 20px;
+}
+.slot-windows {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(10px, 2vw, 16px);
+  position: relative;
+}
+.slot-window {
+  height: 132px;
+  overflow: hidden;
+  border-radius: var(--radius);
+  border: 2px solid var(--line-strong);
+  background: var(--row-bg);
+  position: relative;
+}
+.slot-reel { will-change: transform; }
+.slot-window.is-spinning .slot-reel { filter: blur(1.5px); }
+.slot-cell {
+  height: 132px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+}
+.slot-cell .sc-emoji { font-size: 44px; line-height: 1.1; }
+.slot-cell .sc-name { font-size: 13px; font-weight: 700; color: var(--ink); }
+.slot-window.is-set { border-color: var(--accent); box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 55%, transparent); animation: winner-pulse 1s ease 2; }
+.slot-payline {
+  position: absolute; left: -6px; right: -6px; top: 50%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--gold, var(--accent)), transparent);
+  pointer-events: none;
+  opacity: .85;
+}
+.slot-btn { margin-top: 22px; }
+.slot-btn:disabled { cursor: wait; filter: saturate(.6); opacity: .8; }
+.slot-box { display: grid; justify-items: center; }
+
+/* ---------- 形式六：扭蛋机 ---------- */
+
+.gacha-box { display: grid; justify-items: center; gap: 6px; }
+.gacha-machine {
+  width: min(320px, 80vw);
+  border-radius: 24px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--card-shadow);
+  padding: 22px 22px 18px;
+  display: grid; gap: 16px; justify-items: center;
+}
+.gacha-dome {
+  width: 100%;
+  aspect-ratio: 1.25;
+  border-radius: 50% 50% 18px 18px / 42% 42% 18px 18px;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255,255,255,.5), rgba(255,255,255,.06) 55%),
+    var(--row-bg);
+  border: 2px solid var(--line-strong);
+  position: relative;
+  overflow: hidden;
+}
+.g-ball {
+  position: absolute;
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  box-shadow: inset -6px -8px 12px rgba(0,0,0,.22), inset 4px 5px 8px rgba(255,255,255,.5);
+}
+.gacha-machine.is-cranking .gacha-dome { animation: dome-shake .5s ease; }
+@keyframes dome-shake {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-4px, 2px) rotate(-1deg); }
+  55% { transform: translate(4px, -2px) rotate(1deg); }
+  80% { transform: translate(-2px, 1px); }
+}
+.gacha-chute {
+  width: 92px; height: 46px;
+  border-radius: 14px;
+  background: var(--row-bg);
+  border: 2px solid var(--line-strong);
+  position: relative;
+}
+.gacha-chute::after {
+  content: "";
+  position: absolute; left: 50%; bottom: -12px;
+  transform: translateX(-50%);
+  border: 10px solid transparent;
+  border-top-color: var(--line-strong);
+}
+.gacha-knob {
+  appearance: none; cursor: pointer;
+  border: none;
+  font-family: var(--font-display);
+  font-size: 17px; font-weight: 900; letter-spacing: .12em; text-indent: .12em;
+  color: var(--btn-ink);
+  background: var(--btn-bg);
+  border-radius: var(--radius-btn);
+  padding: 13px 34px;
+  box-shadow: var(--btn-shadow);
+  transition: transform .15s ease, filter .2s ease;
+}
+.gacha-knob:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.06); }
+.gacha-knob:disabled { cursor: wait; filter: saturate(.6); }
+.gacha-knob:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.gacha-egg-stage { min-height: 190px; display: grid; place-items: end center; padding-bottom: 6px; }
+.gacha-egg { position: relative; width: 110px; height: 132px; }
+.gacha-egg .egg-half {
+  position: absolute; inset: 0;
+  border-radius: 50% 50% 46% 46% / 58% 58% 42% 42%;
+  background: radial-gradient(circle at 32% 26%, var(--gold, var(--accent)), var(--accent) 68%);
+  box-shadow: inset -8px -12px 18px rgba(0,0,0,.25), inset 6px 8px 12px rgba(255,255,255,.4), 0 14px 26px rgba(0,0,0,.28);
+}
+.gacha-egg .egg-half.is-top { clip-path: polygon(0 0, 100% 0, 100% 46%, 0 46%); }
+.gacha-egg .egg-half.is-bottom { clip-path: polygon(0 46%, 100% 46%, 100% 100%, 0 100%); border-top: 3px dashed rgba(255,255,255,.35); }
+.gacha-egg .egg-prize {
+  position: absolute; left: 50%; top: 42%;
+  transform: translateX(-50%) scale(0);
+  display: grid; justify-items: center; gap: 4px;
+  z-index: 2;
+  pointer-events: none;
+}
+.gacha-egg .egg-prize .p-emoji { font-size: 52px; filter: drop-shadow(0 8px 14px rgba(0,0,0,.35)); }
+.gacha-egg .egg-prize .p-name {
+  white-space: nowrap;
+  font-size: 13px; font-weight: 800;
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--line-strong);
+  padding: 3px 12px; border-radius: 999px;
+}
+.gacha-egg.is-open .egg-half.is-top { animation: egg-top-fly .6s cubic-bezier(.34,1.2,.5,1) both; }
+.gacha-egg.is-open .egg-half.is-bottom { animation: egg-drop-fade .5s ease .15s both; }
+.gacha-egg.is-open .egg-prize { animation: prize-pop .7s cubic-bezier(.34,1.56,.64,1) .15s both; }
+@keyframes egg-top-fly {
+  from { transform: translateY(0) rotate(0); opacity: 1; }
+  to { transform: translateY(-72px) rotate(-32deg); opacity: 0; }
+}
+@keyframes egg-drop-fade {
+  from { opacity: 1; }
+  to { transform: translateY(14px); opacity: .35; }
+}
+.gacha-egg.is-landed { animation: egg-land .55s cubic-bezier(.3,1.6,.5,1) both; }
+@keyframes egg-land {
+  0% { transform: translateY(-220px) scale(.9); }
+  62% { transform: translateY(0) scale(1.04, .94); }
+  80% { transform: translateY(-16px) scale(.98, 1.03); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+.gacha-egg.is-quiver { animation: egg-quiver .5s ease; }
+@keyframes egg-quiver {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(-7deg); }
+  60% { transform: rotate(6deg); }
+  85% { transform: rotate(-3deg); }
+}
 
 /* ---------- 彩带画布 ---------- */
 
