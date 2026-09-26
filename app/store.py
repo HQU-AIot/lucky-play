@@ -6,7 +6,6 @@
 
 from __future__ import annotations
 
-import json
 import sqlite3
 import threading
 from datetime import datetime
@@ -149,6 +148,11 @@ class Store:
 
         权重由调用方在事务外预计算（权重变化不涉及超卖问题），
         库存扣减在本事务内，保证 remaining 不为负、不超卖。
+
+        已接受的瞬态偏差：权重基于事务外的库存快照。若并发请求恰在
+        某奖品被抽空的同一瞬间到达，该单抽仍按快照权重计算（本应转移
+        给谢谢参与的质量未及时转移）。窗口为微秒级、下一抽自愈、绝不
+        超卖；默认权重下偏差 ≤0.6 个百分点，单机 kiosk 场景可忽略。
         """
         from .lottery import pick_result
 

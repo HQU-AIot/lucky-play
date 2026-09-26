@@ -186,7 +186,7 @@ def test_concurrent_no_oversell():
     assert client.post("/api/draw").json()["result"] == "thanks"
 
     # 还原默认权重与库存
-    default = {"lollipop": 30, "nailong": 20, "notebook": 15, "bookmark": 8,
+    default = {"lollipop": 30, "nailong": 20, "notebook": 15, "bookmark": 10,
                "shark": 8, "crawlpet": 6, GAMESIR: 2}
     client.put("/api/admin/weights", json={"weights": default, "thanks_weight": 9}, headers=TOKEN)
     client.put("/api/admin/stock", json={"id": GAMESIR, "remaining": 1, "total": 1}, headers=TOKEN)
