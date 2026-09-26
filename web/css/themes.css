@@ -1,0 +1,376 @@
+/* ============ Lucky Play · 主题皮肤层（6 套，body[data-theme] 切换） ============
+   每套主题定义完整 token；画布（转盘/彩带/背景氛围）运行时读取这些 CSS 变量。 */
+
+/* ---------- A. festive 红金福运 ---------- */
+[data-theme="festive"] {
+  --bg: #5E1019;
+  --bg-grad:
+    radial-gradient(1100px 700px at 75% -10%, rgba(232,67,78,.35), transparent 60%),
+    linear-gradient(180deg, #6D1420 0%, #4A0D16 100%);
+  --surface: #7A1B24;
+  --stage-bg: rgba(122, 27, 36, .72);
+  --row-bg: rgba(0, 0, 0, .16);
+  --line: rgba(255, 220, 160, .16);
+  --line-strong: rgba(255, 220, 160, .38);
+  --ink: #FFF6E5;
+  --ink-dim: rgba(255, 246, 229, .68);
+  --accent: #E8434E;
+  --accent-2: #F5C451;
+  --accent-ink: #FFF6E5;
+  --gold: #F5C451;
+  --btn-bg: linear-gradient(180deg, #E8434E, #C22633);
+  --btn-ink: #FFF6E5;
+  --btn-shadow: 0 8px 20px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.28);
+  --mask: rgba(38, 6, 10, .62);
+  --radius: 12px; --radius-btn: 999px; --radius-lg: 20px;
+  --card-shadow: 0 14px 34px rgba(0,0,0,.35);
+  --card-shadow-soft: 0 4px 12px rgba(0,0,0,.22);
+  --hover-lift: 0 10px 24px rgba(0,0,0,.4);
+  --font-display: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", "SimSun", serif;
+  --font-body: -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --title-glow: 0 2px 14px rgba(245, 196, 81, .35);
+  --glyph: "🧧";
+  --glyph-bg: linear-gradient(180deg, #F5C451, #D9A441);
+  --glyph-shadow: 0 6px 16px rgba(245, 196, 81, .45);
+  --badge-bg: rgba(245, 196, 81, .14);
+  --wheel-rim: 8px solid #F5C451;
+  --wheel-rim-glow: 0 0 24px rgba(245,196,81,.45), inset 0 0 14px rgba(245,196,81,.3);
+  --hub-ring: #F5C451;
+  --wheel-1: #B32733;
+  --wheel-2: #961D29;
+  --wheel-ink: #FFF6E5;
+  --wheel-thanks: rgba(0, 0, 0, .32);
+  --wheel-border: rgba(255, 220, 160, .55);
+  --box-body-bg: #C22633;
+  --box-ribbon: #F5C451;
+  --card-back-bg: #C22633;
+  --card-back-ink: #F5C451;
+  --card-back-pattern: radial-gradient(circle at 8px 8px, rgba(245,196,81,.35) 2px, transparent 2.5px);
+  --card-back-size: 26px 26px;
+  --confetti: #F5C451, #E8434E, #FFF6E5, #D9A441, #FF8A80;
+  --reveal-glow: 0 0 70px rgba(245, 196, 81, .22);
+  --bg-deco-a: radial-gradient(160px 90px at 8% 4%, rgba(245,196,81,.22), transparent 70%),
+               radial-gradient(160px 90px at 92% 4%, rgba(245,196,81,.22), transparent 70%),
+               radial-gradient(120px 60px at 24% 0%, rgba(232,67,78,.3), transparent 70%),
+               radial-gradient(120px 60px at 76% 0%, rgba(232,67,78,.3), transparent 70%);
+}
+
+/* ---------- B. national 国庆盛典 ---------- */
+[data-theme="national"] {
+  --bg: #8F0C20;
+  --bg-grad:
+    radial-gradient(900px 500px at 50% -8%, rgba(255, 222, 0, .22), transparent 60%),
+    linear-gradient(180deg, #C8102E 0%, #A00E24 48%, #7A0C1D 100%);
+  --surface: #A31227;
+  --stage-bg: rgba(163, 18, 39, .78);
+  --row-bg: rgba(0, 0, 0, .18);
+  --line: rgba(255, 222, 0, .2);
+  --line-strong: rgba(255, 222, 0, .45);
+  --ink: #FFF8E7;
+  --ink-dim: rgba(255, 248, 231, .7);
+  --accent: #FFB800;
+  --accent-2: #FFDE00;
+  --accent-ink: #5E0A16;
+  --gold: #FFDE00;
+  --btn-bg: linear-gradient(180deg, #FFC93D, #F0A500);
+  --btn-ink: #5E0A16;
+  --btn-shadow: 0 8px 22px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.5);
+  --mask: rgba(64, 5, 14, .66);
+  --radius: 12px; --radius-btn: 999px; --radius-lg: 20px;
+  --card-shadow: 0 14px 34px rgba(0,0,0,.35);
+  --card-shadow-soft: 0 4px 12px rgba(0,0,0,.22);
+  --hover-lift: 0 10px 26px rgba(0,0,0,.42);
+  --font-display: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", "SimSun", serif;
+  --font-body: -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --title-glow: 0 2px 16px rgba(255, 222, 0, .45);
+  --glyph: "★";
+  --glyph-bg: linear-gradient(180deg, #FFDE00, #FFB800);
+  --glyph-shadow: 0 6px 18px rgba(255, 222, 0, .5);
+  --badge-bg: rgba(255, 222, 0, .16);
+  --wheel-rim: 8px solid #FFDE00;
+  --wheel-rim-glow: 0 0 28px rgba(255,222,0,.5), inset 0 0 14px rgba(255,222,0,.35);
+  --hub-ring: #FFDE00;
+  --wheel-1: #D0142F;
+  --wheel-2: #B01127;
+  --wheel-ink: #FFF8E7;
+  --wheel-thanks: rgba(0, 0, 0, .34);
+  --wheel-border: rgba(255, 222, 0, .6);
+  --box-body-bg: #C8102E;
+  --box-ribbon: #FFDE00;
+  --card-back-bg: #C8102E;
+  --card-back-ink: #FFDE00;
+  --card-back-pattern:
+    radial-gradient(circle at 6px 6px, rgba(255,222,0,.5) 1.6px, transparent 2px),
+    radial-gradient(circle at 18px 18px, rgba(255,222,0,.32) 1.2px, transparent 1.8px);
+  --card-back-size: 24px 24px;
+  --confetti: #FFDE00, #FFB800, #FFF8E7, #FF5A5F, #C8102E;
+  --reveal-glow: 0 0 80px rgba(255, 222, 0, .3);
+  --bg-deco-a:
+    linear-gradient(180deg, transparent 86%, rgba(64, 5, 14, .55) 100%),
+    radial-gradient(50% 8% at 50% 100%, rgba(64, 5, 14, .8), transparent 80%);
+}
+
+/* ---------- C. neon 星空霓虹 ---------- */
+[data-theme="neon"] {
+  --bg: #070B18;
+  --bg-grad:
+    radial-gradient(900px 600px at 50% 118%, rgba(167,139,250,.2), transparent 62%),
+    linear-gradient(180deg, #0A0F22 0%, #070B18 100%);
+  --surface: rgba(14, 22, 48, .94);
+  --stage-bg: rgba(14, 22, 48, .8);
+  --row-bg: rgba(255, 255, 255, .045);
+  --line: rgba(126, 180, 255, .14);
+  --line-strong: rgba(126, 180, 255, .34);
+  --ink: #EAF2FF;
+  --ink-dim: rgba(234, 242, 255, .6);
+  --accent: #FF3D8A;
+  --accent-2: #22D3EE;
+  --accent-ink: #0B0E1A;
+  --btn-bg: linear-gradient(135deg, #FF3D8A, #A78BFA);
+  --btn-ink: #FFFFFF;
+  --btn-shadow: 0 8px 24px rgba(255,61,138,.4), 0 0 30px rgba(167,139,250,.25);
+  --mask: rgba(3, 5, 12, .68);
+  --radius: 14px; --radius-btn: 12px; --radius-lg: 22px;
+  --card-shadow: 0 18px 40px rgba(0,0,0,.5);
+  --card-shadow-soft: 0 4px 14px rgba(0,0,0,.4);
+  --hover-lift: 0 0 24px rgba(34,211,238,.35), 0 12px 26px rgba(0,0,0,.5);
+  --font-display: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --font-body: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --track-display: .14em;
+  --title-glow: 0 0 20px rgba(255, 61, 138, .6);
+  --glyph: "🛸";
+  --glyph-bg: linear-gradient(135deg, #FF3D8A, #22D3EE);
+  --glyph-shadow: 0 0 22px rgba(34, 211, 238, .55);
+  --badge-bg: rgba(34, 211, 238, .1);
+  --wheel-rim: 5px solid #22D3EE;
+  --wheel-rim-glow: 0 0 26px rgba(34,211,238,.6), inset 0 0 18px rgba(34,211,238,.25);
+  --hub-ring: rgba(34, 211, 238, .9);
+  --wheel-filter: drop-shadow(0 0 16px rgba(34, 211, 238, .22));
+  --wheel-1: #182449;
+  --wheel-2: #121B38;
+  --wheel-ink: #EAF2FF;
+  --wheel-thanks: rgba(0, 0, 0, .45);
+  --wheel-border: rgba(34, 211, 238, .5);
+  --box-body-bg: #1B2A5E;
+  --box-ribbon: #FF3D8A;
+  --card-back-bg: #121B38;
+  --card-back-ink: #22D3EE;
+  --card-back-pattern: linear-gradient(rgba(34,211,238,.25) 1px, transparent 1px),
+                       linear-gradient(90deg, rgba(34,211,238,.25) 1px, transparent 1px);
+  --card-back-size: 14px 14px;
+  --confetti: #FF3D8A, #22D3EE, #A78BFA, #F4F7FF, #FFD166;
+  --reveal-glow: 0 0 60px rgba(255, 61, 138, .25);
+  --bg-deco-a:
+    linear-gradient(rgba(34,211,238,.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34,211,238,.05) 1px, transparent 1px);
+  --bg-deco-a-size: 44px 44px, 44px 44px;
+  --bg-deco-b: radial-gradient(420px 300px at 50% 108%, rgba(34,211,238,.14), transparent 70%);
+}
+
+/* ---------- D. macaron 云朵马卡龙 ---------- */
+[data-theme="macaron"] {
+  --bg: #FDF3F7;
+  --bg-grad: linear-gradient(160deg, #FFF7FA 0%, #F3EFFB 55%, #EAF6F3 100%);
+  --surface: #FFFFFF;
+  --stage-bg: rgba(255, 255, 255, .82);
+  --row-bg: #FDF0F5;
+  --line: rgba(180, 140, 160, .18);
+  --line-strong: rgba(180, 140, 160, .36);
+  --ink: #4A4458;
+  --ink-dim: #8D8399;
+  --accent: #FF8FB5;
+  --accent-2: #8FD0CA;
+  --accent-ink: #FFFFFF;
+  --btn-bg: linear-gradient(135deg, #FFA6C1, #FF8FB5);
+  --btn-ink: #FFFFFF;
+  --btn-shadow: 0 10px 22px rgba(255,143,181,.45), inset 0 -3px 6px rgba(146,66,97,.12);
+  --mask: rgba(74, 68, 88, .38);
+  --radius: 18px; --radius-btn: 999px; --radius-lg: 26px;
+  --card-shadow: 0 16px 36px rgba(190, 140, 165, .24);
+  --card-shadow-soft: 0 4px 12px rgba(190, 140, 165, .16);
+  --hover-lift: 0 14px 28px rgba(190, 140, 165, .32);
+  --font-display: ui-rounded, "PingFang SC", "Yuanti SC", "YouYuan", "Microsoft YaHei", sans-serif;
+  --font-body: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --glyph: "🎀";
+  --glyph-bg: linear-gradient(135deg, #FFC7DA, #B5E5D8);
+  --glyph-shadow: 0 6px 16px rgba(255, 164, 197, .5);
+  --badge-bg: #FFF0F5;
+  --wheel-rim: 10px solid #FFD9E5;
+  --wheel-rim-glow: 0 10px 26px rgba(255,164,197,.35);
+  --hub-ring: #FFFFFF;
+  --wheel-1: #FFD9E4;
+  --wheel-2: #D9EEFF;
+  --wheel-ink: #6B5B70;
+  --wheel-thanks: #E9E2EE;
+  --wheel-border: #FFFFFF;
+  --box-body-bg: #FFA6C1;
+  --box-ribbon: #FFF3B0;
+  --card-back-bg: #FFD9E4;
+  --card-back-ink: #FFFFFF;
+  --card-back-pattern: radial-gradient(circle at 10px 10px, rgba(255,255,255,.55) 3px, transparent 3.5px);
+  --card-back-size: 30px 30px;
+  --confetti: #FFA6C1, #A8D8EA, #FFE7A3, #B8E0C2, #D9C2F0;
+  --reveal-glow: 0 0 60px rgba(255, 164, 197, .3);
+  --bg-deco-a:
+    radial-gradient(180px 70px at 12% 12%, rgba(255,255,255,.9), transparent 70%),
+    radial-gradient(240px 90px at 88% 22%, rgba(255,255,255,.75), transparent 70%),
+    radial-gradient(200px 80px at 24% 78%, rgba(255,255,255,.6), transparent 70%),
+    radial-gradient(260px 90px at 78% 86%, rgba(255,255,255,.7), transparent 70%);
+}
+
+/* ---------- E. tech 未来科技 HUD ---------- */
+[data-theme="tech"] {
+  --bg: #04121F;
+  --bg-grad:
+    radial-gradient(1000px 700px at 50% -20%, rgba(0,229,255,.14), transparent 55%),
+    linear-gradient(180deg, #051A2E 0%, #04121F 100%);
+  --surface: rgba(7, 32, 58, .92);
+  --stage-bg: rgba(7, 32, 58, .72);
+  --row-bg: rgba(0, 229, 255, .05);
+  --line: rgba(0, 229, 255, .16);
+  --line-strong: rgba(0, 229, 255, .4);
+  --ink: #D8F3FF;
+  --ink-dim: rgba(216, 243, 255, .58);
+  --accent: #00E5FF;
+  --accent-2: #FFC857;
+  --accent-ink: #04202F;
+  --btn-bg: linear-gradient(135deg, #00E5FF, #0B93E0);
+  --btn-ink: #04121F;
+  --btn-shadow: 0 8px 22px rgba(0,229,255,.35), inset 0 0 0 1px rgba(216,243,255,.4);
+  --mask: rgba(1, 8, 15, .7);
+  --radius: 8px; --radius-btn: 6px; --radius-lg: 14px;
+  --card-shadow: 0 16px 38px rgba(0,0,0,.5), inset 0 0 0 1px rgba(0,229,255,.08);
+  --card-shadow-soft: 0 4px 14px rgba(0,0,0,.4);
+  --hover-lift: 0 0 22px rgba(0,229,255,.4), 0 12px 26px rgba(0,0,0,.5);
+  --font-display: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --font-body: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --font-utility: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Consolas, monospace;
+  --track-display: .2em;
+  --title-glow: 0 0 18px rgba(0, 229, 255, .5);
+  --glyph: "◈";
+  --glyph-bg: linear-gradient(135deg, #00E5FF, #1976FF);
+  --glyph-shadow: 0 0 20px rgba(0, 229, 255, .55);
+  --badge-bg: rgba(0, 229, 255, .08);
+  --wheel-rim: 4px solid #00E5FF;
+  --wheel-rim-glow: 0 0 24px rgba(0,229,255,.5), inset 0 0 16px rgba(0,229,255,.2);
+  --hub-ring: rgba(216, 243, 255, .8);
+  --wheel-filter: drop-shadow(0 0 14px rgba(0, 229, 255, .25));
+  --wheel-1: #0A2C4A;
+  --wheel-2: #0D3A5C;
+  --wheel-ink: #D8F3FF;
+  --wheel-thanks: rgba(0, 0, 0, .48);
+  --wheel-border: rgba(0, 229, 255, .45);
+  --box-body-bg: #0D3A5C;
+  --box-ribbon: #00E5FF;
+  --card-back-bg: #0A2C4A;
+  --card-back-ink: #00E5FF;
+  --card-back-pattern: linear-gradient(45deg, rgba(0,229,255,.2) 25%, transparent 25%, transparent 75%, rgba(0,229,255,.2) 75%);
+  --card-back-size: 16px 16px;
+  --confetti: #00E5FF, #1976FF, #8BE9FD, #FFC857, #FFFFFF;
+  --reveal-glow: 0 0 60px rgba(0, 229, 255, .28);
+  --bg-deco-a: repeating-linear-gradient(0deg, rgba(216,243,255,.022) 0 1px, transparent 1px 4px);
+  --bg-deco-b:
+    linear-gradient(rgba(0,229,255,.12), rgba(0,229,255,.12)) 24px 24px / 26px 3px no-repeat,
+    linear-gradient(rgba(0,229,255,.12), rgba(0,229,255,.12)) 24px 24px / 3px 26px no-repeat,
+    linear-gradient(rgba(0,229,255,.12), rgba(0,229,255,.12)) calc(100% - 24px) calc(100% - 24px) / 26px 3px no-repeat,
+    linear-gradient(rgba(0,229,255,.12), rgba(0,229,255,.12)) calc(100% - 24px) calc(100% - 24px) / 3px 26px no-repeat;
+}
+
+/* ---------- F. pixel 像素街机 ---------- */
+[data-theme="pixel"] {
+  --bg: #1A1C2C;
+  --bg-grad: linear-gradient(180deg, #333C57 0%, #1A1C2C 52%, #1A1C2C 100%);
+  --surface: #29366F;
+  --stage-bg: rgba(41, 54, 111, .88);
+  --row-bg: rgba(255, 255, 255, .06);
+  --line: rgba(255, 255, 255, .14);
+  --line-strong: rgba(255, 236, 39, .5);
+  --ink: #F4F4F4;
+  --ink-dim: rgba(244, 244, 244, .62);
+  --accent: #FF004D;
+  --accent-2: #00E436;
+  --accent-ink: #FFFFFF;
+  --btn-bg: #FF004D;
+  --btn-ink: #FFFFFF;
+  --btn-shadow: 0 5px 0 #A01035;
+  --mask: rgba(10, 10, 20, .7);
+  --radius: 0px; --radius-btn: 0px; --radius-lg: 0px;
+  --card-shadow: 8px 8px 0 rgba(0, 0, 0, .35);
+  --card-shadow-soft: 4px 4px 0 rgba(0, 0, 0, .3);
+  --hover-lift: 10px 10px 0 rgba(0, 0, 0, .4);
+  --font-display: ui-monospace, "Sarasa Mono SC", "Cascadia Mono", Consolas, "Courier New", monospace;
+  --font-body: ui-monospace, "Sarasa Mono SC", "Cascadia Mono", Consolas, "Courier New", monospace;
+  --track-display: .08em;
+  --title-glow: 4px 4px 0 rgba(0, 0, 0, .45);
+  --glyph: "👾";
+  --glyph-bg: #29ADFF;
+  --glyph-shadow: 4px 4px 0 rgba(0, 0, 0, .4);
+  --badge-bg: rgba(255, 236, 39, .12);
+  --wheel-rim: 8px solid #FFEC27;
+  --wheel-rim-glow: 6px 6px 0 rgba(0, 0, 0, .35);
+  --hub-ring: #FFEC27;
+  --wheel-1: #3B5DC9;
+  --wheel-2: #29366F;
+  --wheel-ink: #F4F4F4;
+  --wheel-thanks: rgba(0, 0, 0, .5);
+  --wheel-border: #FFEC27;
+  --box-body-bg: #FFA300;
+  --box-ribbon: #FFEC27;
+  --card-back-bg: #3B5DC9;
+  --card-back-ink: #FFEC27;
+  --card-back-pattern: conic-gradient(rgba(255,236,39,.28) 90deg, transparent 90deg 180deg, rgba(255,236,39,.28) 180deg 270deg, transparent 270deg);
+  --card-back-size: 16px 16px;
+  --confetti: #FF004D, #FFA300, #FFEC27, #00E436, #29ADFF, #F4F4F4;
+  --reveal-glow: 8px 8px 0 rgba(0, 0, 0, .4);
+  --bg-deco-a: repeating-linear-gradient(0deg, rgba(10, 10, 20, .16) 0 2px, transparent 2px 5px);
+}
+
+/* ---------- 背景装饰挂载 ---------- */
+
+.bg-deco { background-image: var(--bg-deco-a, none); background-size: var(--bg-deco-a-size, auto); }
+.bg-deco::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: var(--bg-deco-b, none);
+  background-repeat: no-repeat;
+}
+
+/* ---------- 主题专属组件微调 ---------- */
+
+/* pixel：硬边框 + 像素阴影 */
+[data-theme="pixel"] .tool-btn,
+[data-theme="pixel"] .panel,
+[data-theme="pixel"] .stage { border-width: 3px; }
+[data-theme="pixel"] .tool-btn { box-shadow: 4px 4px 0 rgba(0,0,0,.35); }
+[data-theme="pixel"] .tool-btn:hover { transform: translate(-1px, -2px); box-shadow: 6px 6px 0 rgba(0,0,0,.35); }
+[data-theme="pixel"] .g-cell { border-width: 3px; }
+[data-theme="pixel"] .g-cell.is-lit { background: #FFEC27; border-color: #FFEC27; box-shadow: 0 0 0 3px rgba(255,236,39,.35); }
+[data-theme="pixel"] .g-cell.is-lit .g-name,
+[data-theme="pixel"] .g-cell.is-lit .g-emoji { color: #1A1C2C; }
+[data-theme="pixel"] .btn-primary { box-shadow: 0 5px 0 #A01035; border-radius: 0; }
+[data-theme="pixel"] .wheel-hub { border-radius: 0; border-width: 4px; }
+[data-theme="pixel"] .wheel-pointer { filter: none; text-shadow: 3px 3px 0 rgba(0,0,0,.4); }
+[data-theme="pixel"] .reveal-emoji { filter: drop-shadow(4px 4px 0 rgba(0,0,0,.4)); }
+
+/* national：五角星指针 */
+[data-theme="national"] .wheel-pointer { color: #FFDE00; }
+
+/* macaron：果冻按钮 */
+[data-theme="macaron"] .btn-primary:active,
+[data-theme="macaron"] .g-hub:active { animation: jelly .5s ease; }
+@keyframes jelly {
+  0% { transform: scale(1, 1); }
+  30% { transform: scale(1.12, .86); }
+  55% { transform: scale(.92, 1.1); }
+  75% { transform: scale(1.05, .95); }
+  100% { transform: scale(1, 1); }
+}
+
+/* festive / national：指针金色 */
+[data-theme="festive"] .wheel-pointer { color: #F5C451; }
+[data-theme="festive"] .g-cell.is-lit .g-name { color: #FFF6E5; }
+[data-theme="national"] .g-cell.is-lit .g-name { color: #5E0A16; }
+[data-theme="national"] .g-cell.is-lit .g-emoji { filter: none; }
+[data-theme="tech"] .g-cell.is-lit .g-name { color: #04121F; }
+[data-theme="neon"] .g-cell.is-lit .g-name { color: #FFFFFF; }
+[data-theme="macaron"] .g-cell.is-lit .g-name { color: #FFFFFF; }

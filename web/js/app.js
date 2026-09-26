@@ -1,0 +1,259 @@
+/* 总调度：主题/玩法切换、抽奖锁、余量与战绩、活动信息。 */
+
+import { api } from "./api.js";
+import { fx } from "./fx.js";
+import { FORMS } from "./forms/index.js";
+
+const THEMES = [
+  { id: "festive", name: "红金福运", desc: "中式礼堂红灯笼下的鎏金转盘", swatches: ["#6D1420", "#E8434E", "#F5C451", "#FFF6E5"] },
+  { id: "national", name: "国庆盛典", desc: "旗帜红金星漫天，烟花夜幕压轴", swatches: ["#C8102E", "#FFDE00", "#FFB800", "#FFF8E7"], badge: "9·30 前夜" },
+  { id: "neon", name: "星空霓虹", desc: "深夜电玩城的霓虹抽奖机", swatches: ["#0A0F22", "#FF3D8A", "#22D3EE", "#A78BFA"] },
+  { id: "macaron", name: "云朵马卡龙", desc: "甜品柜上的软萌抽奖，圆润无棱角", swatches: ["#FFA6C1", "#A8D8EA", "#FFE7A3", "#B8E0C2"] },
+  { id: "tech", name: "未来科技", desc: "舱内概率终端，一切皆读数", swatches: ["#04121F", "#00E5FF", "#1976FF", "#FFC857"] },
+  { id: "pixel", name: "像素街机", desc: "PICO-8 街机机位，插币开闸出票", swatches: ["#1A1C2C", "#FF004D", "#FFEC27", "#29ADFF"] },
+];
+
+const THANKS_ITEM = { id: "thanks", name: "谢谢参与", emoji: "🙏", remaining: Infinity };
+
+const state = {
+  theme: localStorage.getItem("lucky.theme") || "festive",
+  form: localStorage.getItem("lucky.form") || "wheel",
+  prizes: [],
+  meta: {},
+  busy: false,
+  current: null,
+};
+
+const $ = (sel) => document.querySelector(sel);
+
+/* ---------- 数据 ---------- */
+
+async function loadMeta() {
+  try {
+    state.meta = await api.meta();
+    $("#event-name").textContent = state.meta.event_name || "幸运抽奖";
+    document.title = state.meta.event_name || "幸运抽奖";
+    $("#event-note").textContent = state.meta.event_note || "";
+    const d = state.meta.event_date;
+    if (d) {
+      const [, m, day] = d.split("-").map(Number);
+      $("#event-date").textContent = `${m} 月 ${day} 日开奖`;
+    } else {
+      $("#event-date").hidden = true;
+    }
+    updateCountdown();
+  } catch {
+    /* 首屏元信息失败不阻塞，用默认文案 */
+  }
+}
+
+function updateCountdown() {
+  const el = $("#event-countdown");
+  const dateStr = state.meta.event_date;
+  const show = state.theme === "national" && dateStr;
+  if (!show) { el.hidden = true; return; }
+  const target = new Date(`${dateStr}T00:00:00`);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const days = Math.round((target - today) / 86400000);
+  el.hidden = false;
+  el.textContent = days > 1 ? `距开奖还有 ${days} 天` : days === 1 ? "明天开奖！" : days === 0 ? "今天开奖！" : "开奖日已过";
+}
+
+async function refreshStock(quiet = true) {
+  try {
+    const data = await api.prizes();
+    state.prizes = data.prizes;
+    $("#stock-total").innerHTML = `共剩 <b>${data.total_remaining}</b> 份`;
+    const list = $("#stock-list");
+    list.innerHTML = "";
+    for (const p of data.prizes) {
+      const li = document.createElement("li");
+      li.className = "stock-item" + (p.remaining === 0 ? " is-empty" : "");
+      li.innerHTML = `<span class="s-emoji">${p.emoji}</span><span class="s-name">${p.name}</span>
+        <span class="s-count"><b>${p.remaining}</b>/${p.total}</span>`;
+      list.appendChild(li);
+    }
+    if (!quiet) fx.toast(`奖品余量已刷新，还剩 ${data.total_remaining} 份`);
+  } catch {
+    if (!quiet) fx.toast("余量刷新失败，稍后再试");
+  } finally {
+    window.dispatchEvent(new CustomEvent("lucky:prizes"));
+  }
+}
+
+function addLog(result) {
+  const list = $("#log-list");
+  const empty = list.querySelector(".log-empty");
+  if (empty) empty.remove();
+  const win = result.result === "prize";
+  const li = document.createElement("li");
+  if (win) li.classList.add("is-win");
+  const time = new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
+  li.innerHTML = `<span>${win ? result.prize.emoji + " " + result.prize.name : "🙏 谢谢参与"}</span>
+    <span class="log-ts">${time}</span>`;
+  list.prepend(li);
+  while (list.children.length > 30) list.lastChild.remove();
+}
+
+/* ---------- 抽奖上下文（交给各形式使用） ---------- */
+
+const ctx = {
+  reduced: fx.reducedMotion(),
+  fx,
+  items() {
+    return [...state.prizes.map((p) => ({ ...p })), THANKS_ITEM];
+  },
+  async draw() {
+    if (state.busy) return null;
+    state.busy = true;
+    document.body.classList.add("is-busy");
+    try {
+      return await api.draw();
+    } catch {
+      fx.toast("网络开小差了，再试一次");
+      state.busy = false;
+      document.body.classList.remove("is-busy");
+      return null;
+    }
+  },
+  async reveal(result) {
+    addLog(result);
+    refreshStock();
+    const choice = await fx.showResult(result);
+    state.busy = false;
+    document.body.classList.remove("is-busy");
+    return choice;
+  },
+  refresh() {
+    refreshStock();
+  },
+};
+
+/* ---------- 主题 / 玩法 ---------- */
+
+let currentForm = null;
+
+function applyTheme(id, announce = true) {
+  if (state.busy) {
+    fx.toast("这一轮转完再换风格～");
+    return;
+  }
+  if (!THEMES.some((t) => t.id === id)) id = "festive"; // localStorage 残值兜底
+  state.theme = id;
+  document.body.dataset.theme = id;
+  localStorage.setItem("lucky.theme", id);
+  fx.setTheme(id);
+  updateCountdown();
+  document.querySelectorAll("#theme-grid .theme-card").forEach((c) =>
+    c.classList.toggle("is-active", c.dataset.id === id)
+  );
+  if (announce) window.dispatchEvent(new CustomEvent("lucky:theme"));
+}
+
+function applyForm(id) {
+  if (state.busy) {
+    fx.toast("这一轮转完再换玩法～");
+    return;
+  }
+  if (!FORMS[id]) id = "wheel";
+  state.form = id;
+  localStorage.setItem("lucky.form", id);
+  if (currentForm?.destroy) currentForm.destroy();
+  const stage = $("#stage");
+  stage.innerHTML = "";
+  currentForm = FORMS[id].mount(stage, ctx) || null;
+  document.querySelectorAll("#form-grid .form-card").forEach((c) =>
+    c.classList.toggle("is-active", c.dataset.id === id)
+  );
+}
+
+function buildThemeGrid() {
+  const grid = $("#theme-grid");
+  grid.innerHTML = "";
+  for (const t of THEMES) {
+    const btn = document.createElement("button");
+    btn.className = "theme-card";
+    btn.type = "button";
+    btn.dataset.id = t.id;
+    btn.innerHTML = `
+      <span class="t-name">${t.name}
+        ${t.badge ? `<span class="badge-now">${t.badge}</span>` : ""}
+      </span>
+      <span class="t-swatches">${t.swatches.map((c) => `<i style="background:${c}"></i>`).join("")}</span>
+      <span class="t-desc">${t.desc}</span>`;
+    btn.addEventListener("click", () => {
+      fx.sound.click();
+      applyTheme(t.id);
+      closeOverlays();
+    });
+    grid.appendChild(btn);
+  }
+}
+
+function buildFormGrid() {
+  const grid = $("#form-grid");
+  grid.innerHTML = "";
+  for (const f of Object.values(FORMS)) {
+    const btn = document.createElement("button");
+    btn.className = "form-card";
+    btn.type = "button";
+    btn.dataset.id = f.id;
+    btn.innerHTML = `<span class="f-icon">${f.icon}</span><span class="f-name">${f.name}</span><span class="f-desc">${f.desc}</span>`;
+    btn.addEventListener("click", () => {
+      fx.sound.click();
+      applyForm(f.id);
+      closeOverlays();
+    });
+    grid.appendChild(btn);
+  }
+}
+
+function closeOverlays() {
+  $("#overlay-theme").hidden = true;
+  $("#overlay-form").hidden = true;
+}
+
+/* ---------- 启动 ---------- */
+
+function init() {
+  fx.init();
+  buildThemeGrid();
+  buildFormGrid();
+
+  $("#btn-theme").addEventListener("click", () => {
+    $("#overlay-form").hidden = true;
+    $("#overlay-theme").hidden = false;
+  });
+  $("#btn-form").addEventListener("click", () => {
+    $("#overlay-theme").hidden = true;
+    $("#overlay-form").hidden = false;
+  });
+  document.querySelectorAll(".overlay").forEach((ov) => {
+    ov.addEventListener("click", (e) => {
+      if (e.target === ov || e.target.closest("[data-close]")) closeOverlays();
+    });
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeOverlays();
+  });
+
+  const soundBtn = $("#btn-sound");
+  const paintSound = () => {
+    soundBtn.textContent = fx.sound.enabled ? "🔊" : "🔇";
+    soundBtn.setAttribute("aria-pressed", String(fx.sound.enabled));
+  };
+  soundBtn.addEventListener("click", () => {
+    fx.sound.toggle();
+    paintSound();
+    fx.sound.click();
+  });
+  paintSound();
+
+  applyTheme(state.theme, false);
+  applyForm(state.form);
+  loadMeta();
+  refreshStock();
+}
+
+init();

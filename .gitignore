@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+uv.lock
+.DS_Store
+gui-test-screenshots/
