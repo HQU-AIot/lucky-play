@@ -1,10 +1,9 @@
 /* 形式四：翻牌。8 张暗牌，翻开哪张哪张就是一次真实抽奖（服务端扣库存）；
    其余牌翻开显示按当前概率真实采样的奖品分布（/api/sample，无副作用）。
-   节奏对齐音乐：虚晃四连 + 主牌蓄力 4.3s，翻面完成恰在 RESULT_AT=5s"停"。 */
+   节奏对齐音乐：虚晃四连 + 主牌蓄力 4.3s，翻面完成恰在 5s"停"。 */
 
 import { sleep } from "../easing.js";
 import { api } from "../api.js?v=10";
-import { RESULT_AT } from "../music.js?v=10";
 
 const FLIP_MS = 700; // 与 base.css .f-inner transition .7s 对齐
 
@@ -97,7 +96,7 @@ export function mount(stage, ctx) {
       await sleep(780);
     }
 
-    // 翻开主牌 = 开奖；翻面 transition .7s 完成 → 恰好 RESULT_AT"停"
+    // 翻开主牌 = 开奖；翻面 transition .7s 完成 → 恰好 5s"停"
     cards[index].classList.add("is-flipped");
     await sleep(ctx.reduced ? 100 : FLIP_MS);
 

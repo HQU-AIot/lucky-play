@@ -3,7 +3,7 @@
 
 import { rand } from "./easing.js";
 
-export const reducedMotion = () =>
+const reducedMotion = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 function cssVar(name) {
@@ -304,7 +304,6 @@ const bgfx = {
 
 const reveal = {
   mask: null,
-  lastClose: null,
 
   init() {
     this.mask = document.getElementById("reveal");
@@ -329,7 +328,6 @@ const reveal = {
       ? `好运直达！「${result.prize.name}」已收入囊中，记得找管理员领取～`
       : "差一点点而已——好运气正在打包，下一发就到。";
     this.mask.hidden = false;
-    this.lastClose = null;
     document.getElementById("reveal-close").focus();
     if (win) {
       if (!reducedMotion()) confetti.cannons();
@@ -370,7 +368,7 @@ function toast(msg) {
 }
 
 export const fx = {
-  sound, confetti, bgfx, reveal, toast, reducedMotion,
+  sound, confetti, toast, reducedMotion,
   init() {
     confetti.init();
     bgfx.init();

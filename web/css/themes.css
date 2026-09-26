@@ -29,10 +29,6 @@
   --font-display: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", "SimSun", serif;
   --font-body: -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
   --title-glow: 0 2px 14px rgba(245, 196, 81, .35);
-  --glyph: "🧧";
-  --glyph-bg: linear-gradient(180deg, #F5C451, #D9A441);
-  --glyph-shadow: 0 6px 16px rgba(245, 196, 81, .45);
-  --badge-bg: rgba(245, 196, 81, .14);
   --wheel-rim: 8px solid #F5C451;
   --wheel-rim-glow: 0 0 24px rgba(245,196,81,.45), inset 0 0 14px rgba(245,196,81,.3);
   --hub-ring: #F5C451;
@@ -83,10 +79,6 @@
   --font-display: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", "SimSun", serif;
   --font-body: -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
   --title-glow: 0 2px 16px rgba(255, 222, 0, .45);
-  --glyph: "★";
-  --glyph-bg: linear-gradient(180deg, #FFDE00, #FFB800);
-  --glyph-shadow: 0 6px 18px rgba(255, 222, 0, .5);
-  --badge-bg: rgba(255, 222, 0, .16);
   --wheel-rim: 8px solid #FFDE00;
   --wheel-rim-glow: 0 0 28px rgba(255,222,0,.5), inset 0 0 14px rgba(255,222,0,.35);
   --hub-ring: #FFDE00;
@@ -138,10 +130,6 @@
   --font-body: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
   --track-display: .14em;
   --title-glow: 0 0 20px rgba(255, 61, 138, .6);
-  --glyph: "🛸";
-  --glyph-bg: linear-gradient(135deg, #FF3D8A, #22D3EE);
-  --glyph-shadow: 0 0 22px rgba(34, 211, 238, .55);
-  --badge-bg: rgba(34, 211, 238, .1);
   --wheel-rim: 5px solid #22D3EE;
   --wheel-rim-glow: 0 0 26px rgba(34,211,238,.6), inset 0 0 18px rgba(34,211,238,.25);
   --hub-ring: rgba(34, 211, 238, .9);
@@ -191,10 +179,6 @@
   --hover-lift: 0 14px 28px rgba(190, 140, 165, .32);
   --font-display: ui-rounded, "PingFang SC", "Yuanti SC", "YouYuan", "Microsoft YaHei", sans-serif;
   --font-body: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --glyph: "🎀";
-  --glyph-bg: linear-gradient(135deg, #FFC7DA, #B5E5D8);
-  --glyph-shadow: 0 6px 16px rgba(255, 164, 197, .5);
-  --badge-bg: #FFF0F5;
   --wheel-rim: 10px solid #FFD9E5;
   --wheel-rim-glow: 0 10px 26px rgba(255,164,197,.35);
   --hub-ring: #FFFFFF;
@@ -244,13 +228,8 @@
   --hover-lift: 0 0 22px rgba(0,229,255,.4), 0 12px 26px rgba(0,0,0,.5);
   --font-display: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
   --font-body: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-utility: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Consolas, monospace;
   --track-display: .2em;
   --title-glow: 0 0 18px rgba(0, 229, 255, .5);
-  --glyph: "◈";
-  --glyph-bg: linear-gradient(135deg, #00E5FF, #1976FF);
-  --glyph-shadow: 0 0 20px rgba(0, 229, 255, .55);
-  --badge-bg: rgba(0, 229, 255, .08);
   --wheel-rim: 4px solid #00E5FF;
   --wheel-rim-glow: 0 0 24px rgba(0,229,255,.5), inset 0 0 16px rgba(0,229,255,.2);
   --hub-ring: rgba(216, 243, 255, .8);
@@ -302,10 +281,6 @@
   --font-body: ui-monospace, "Sarasa Mono SC", "Cascadia Mono", Consolas, "Courier New", monospace;
   --track-display: .08em;
   --title-glow: 4px 4px 0 rgba(0, 0, 0, .45);
-  --glyph: "👾";
-  --glyph-bg: #29ADFF;
-  --glyph-shadow: 4px 4px 0 rgba(0, 0, 0, .4);
-  --badge-bg: rgba(255, 236, 39, .12);
   --wheel-rim: 8px solid #FFEC27;
   --wheel-rim-glow: 6px 6px 0 rgba(0, 0, 0, .35);
   --hub-ring: #FFEC27;
@@ -339,7 +314,6 @@
 
 /* pixel：硬边框 + 像素阴影 */
 [data-theme="pixel"] .tool-btn,
-[data-theme="pixel"] .panel,
 [data-theme="pixel"] .stage { border-width: 3px; }
 [data-theme="pixel"] .tool-btn { box-shadow: 4px 4px 0 rgba(0,0,0,.35); }
 [data-theme="pixel"] .tool-btn:hover { transform: translate(-1px, -2px); box-shadow: 6px 6px 0 rgba(0,0,0,.35); }

@@ -8,7 +8,6 @@
    音效开关（fx.sound）独立于本开关；prefers-reduced-motion 时不播音乐。 */
 
 export const RESULT_AT = 5.0; // 歌中"停"的时刻 = 各玩法统一出结果时刻（秒）
-export const SONG_END = 8.04; // 整曲时长（秒），仅作语义参考
 
 const SRC = "../assets/lucky-song.mp3?v=10";
 const VOLUME = 0.95;
@@ -100,11 +99,6 @@ export const music = {
         }
       }, FADE_TICK);
     }, waitMs);
-  },
-
-  /** 调试/测试用：底层 audio 元素只读访问。 */
-  get element() {
-    return audio;
   },
 
   toggle() {

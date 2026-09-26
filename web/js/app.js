@@ -22,7 +22,6 @@ const state = {
   prizes: [],
   meta: {},
   busy: false,
-  current: null,
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -62,7 +61,6 @@ const ctx = {
   async draw() {
     if (state.busy) return null;
     state.busy = true;
-    document.body.classList.add("is-busy");
     try {
       const result = await api.draw();
       // 结果到手即起播：动画与音乐同一起跑线，5s 处歌喊"停"时各玩法恰好出结果
@@ -71,7 +69,6 @@ const ctx = {
     } catch {
       fx.toast("网络开小差了，再试一次");
       state.busy = false;
-      document.body.classList.remove("is-busy");
       return null;
     }
   },
@@ -85,7 +82,6 @@ const ctx = {
     if (fanfareByMusic) music.winStop(() => fx.sound.win());
     const choice = await fx.showResult(result, { musicRound, fanfareByMusic });
     state.busy = false;
-    document.body.classList.remove("is-busy");
     return choice;
   },
   refresh() {
