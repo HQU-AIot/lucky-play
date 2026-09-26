@@ -46,27 +46,32 @@ export function mount(stage, ctx) {
     if (result.result === "prize") setFace(cards[index], result.prize.emoji, result.prize.name);
     else setFace(cards[index], "🙏", "谢谢参与");
 
-    // 虚晃两张（降低"直接翻中"的突兀感）
+    // 虚晃：两张未选中的牌面朝下轻抬示意，制造悬念但不剧透
     if (!ctx.reduced) {
       const decoys = cards.map((_, i) => i).filter((i) => i !== index);
       for (let d = 0; d < 2; d++) {
         const j = decoys.splice((Math.random() * decoys.length) | 0, 1)[0];
-        setFace(cards[j], "🙏", "谢谢参与");
-        cards[j].classList.add("is-flipped");
+        cards[j].animate(
+          [
+            { transform: "translateY(0) rotate(0)" },
+            { transform: "translateY(-12px) rotate(-2.5deg)", offset: 0.45 },
+            { transform: "translateY(0) rotate(0)" },
+          ],
+          { duration: 420, easing: "ease-out" }
+        );
         ctx.fx.sound.tick(0.3);
-        await sleep(90);
+        await sleep(160);
       }
-      await sleep(180);
+      await sleep(200);
     }
 
     cards[index].classList.add("is-flipped");
     await sleep(ctx.reduced ? 100 : 620);
 
-    // 其余牌全部翻到谢谢参与并压暗
+    // 其余牌保持牌面不翻开，仅压暗——不铺一墙"谢谢参与"
     cards.forEach((c, i) => {
       if (i === index) return;
-      setFace(c, "🙏", "谢谢参与");
-      setTimeout(() => c.classList.add("is-flipped", "is-dim"), ctx.reduced ? 0 : i * 55);
+      c.classList.add("is-dim");
     });
     cards[index].classList.add("is-result");
     await sleep(ctx.reduced ? 150 : 750);
