@@ -333,7 +333,9 @@ const reveal = {
     document.getElementById("reveal-close").focus();
     if (win) {
       if (!reducedMotion()) confetti.cannons();
-      sound.win();
+      // 音乐在场时把胜利琶音推迟到"停"唱完、收刀之后，避免盖住那个字
+      if (opts.delayFanfare) setTimeout(() => sound.win(), 510);
+      else sound.win();
     } else if (!opts.musicRound) {
       // 音乐在场时，"没中"+哭声就是判词，不再叠加默认谢谢音效
       sound.thanks();

@@ -99,8 +99,9 @@ const ctx = {
   async reveal(result) {
     loadPrizes();
     const win = result.result === "prize";
-    if (win) music.winFade(); // 赶在歌里唱"没中"之前收歌
-    const choice = await fx.showResult(result, { musicRound: music.isPlaying() });
+    const musicRound = music.isPlaying();
+    if (win) music.winFade(); // "停"唱完整后收刀
+    const choice = await fx.showResult(result, { musicRound, delayFanfare: win && musicRound });
     state.busy = false;
     document.body.classList.remove("is-busy");
     return choice;

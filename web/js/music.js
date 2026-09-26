@@ -10,8 +10,11 @@ export const RESULT_AT = 4.0; // 歌中"停"的时刻 = 各玩法统一出结果
 export const SONG_END = 8.04; // 整曲时长（秒），仅作语义参考
 
 const SRC = "../assets/lucky-song.mp3?v=6";
-const VOLUME = 0.85;
-const FADE_STEP = 0.12; // 每帧衰减量，30ms 间隔：0.85/0.12 ≈ 7 拍 ≈ 0.21s 淡出
+const VOLUME = 0.95;
+const FADE_STEP = 0.2;  // 每帧衰减量，25ms 间隔：≈0.11s 快速收刀
+// 中奖收刀时机：reveal ≈ 音乐 4.03s，+0.48s = 4.51s，正落进歌里 4.52-4.58 的
+// 天然停顿口——"停"（3.94-4.32s 音节）完整唱完后才切，且绝不漏 4.76s 起的"没中"
+const WIN_CUT_DELAY = 480;
 
 let audio = null;
 let fadeTimer = 0;
@@ -69,7 +72,8 @@ export const music = {
     return roundActive;
   },
 
-  /** 中奖：让 4.0s 的"停"完整喊出来（延 0.3s），再在 4.9s"没中"之前淡出。 */
+  /** 中奖：让 4.0s 的"停"完整喊出来（延 0.48s 落进歌的停顿口再收刀），
+      快速淡出确保绝不漏出 4.76s 起的"没中"。 */
   winFade() {
     if (!audio || !roundActive) return;
     roundActive = false;
@@ -87,8 +91,8 @@ export const music = {
         } else {
           a.volume = v;
         }
-      }, 30);
-    }, 300);
+      }, 25);
+    }, WIN_CUT_DELAY);
   },
 
   /** 调试/测试用：底层 audio 元素只读访问。 */
