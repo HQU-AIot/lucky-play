@@ -123,6 +123,30 @@ def draw():
     return outcome
 
 
+@app.get("/api/sample")
+def sample_results(count: int = Query(default=7, ge=1, le=20)):
+    """按当前有效概率独立采样展示结果（无副作用，不扣库存）。
+
+    供翻牌等形式的旁位展示：其余牌面是"如果翻它"的真实分布采样。
+    """
+    from .lottery import pick_result
+
+    dyn_enabled, dyn_mode = _dyn()
+    prize_eff, thanks_eff = effective_weights(
+        store.specs(), _thanks_weight(), dyn_enabled, dyn_mode
+    )
+    prizes = {p["id"]: p for p in store.list_prizes()}
+    samples = []
+    for _ in range(count):
+        outcome = pick_result(rng, prize_eff, thanks_eff)
+        if outcome and outcome != "thanks" and outcome in prizes:
+            p = prizes[outcome]
+            samples.append({"result": "prize", "id": outcome, "name": p["name"], "emoji": p["emoji"]})
+        else:
+            samples.append({"result": "thanks", "id": "thanks", "name": "谢谢参与", "emoji": "🙏"})
+    return {"samples": samples}
+
+
 # ---- 后台接口 ----
 
 

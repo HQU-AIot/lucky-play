@@ -9,4 +9,5 @@ export const api = {
   meta: () => fetch("/api/meta").then(toJson),
   prizes: () => fetch("/api/prizes").then(toJson),
   draw: () => fetch("/api/draw", { method: "POST" }).then(toJson),
+  sample: (count = 7) => fetch(`/api/sample?count=${count}`).then(toJson),
 };

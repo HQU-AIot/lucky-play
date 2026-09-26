@@ -1,7 +1,9 @@
-/* 形式四：翻牌。8 张暗牌选一张：先快速虚晃两张，再停在选中张；
-   选中卡翻开即结果，其余卡翻到谢谢参与后淡出。 */
+/* 形式四：翻牌。8 张暗牌，翻开哪张哪张就是一次真实抽奖（服务端扣库存）；
+   其余牌翻开显示按当前概率真实采样的奖品分布（/api/sample，无副作用），
+   让全场是"真实的可能性"，而不是千篇一律。 */
 
 import { sleep } from "../easing.js";
+import { api } from "../api.js?v=5";
 
 export function mount(stage, ctx) {
   stage.innerHTML = `
@@ -37,7 +39,11 @@ export function mount(stage, ctx) {
   async function pick(index) {
     if (running) return;
     ctx.fx.sound.click();
-    const result = await ctx.draw();
+    // 真实抽奖（扣库存）与旁位采样（无副作用）并行
+    const [result, sampled] = await Promise.all([
+      ctx.draw(),
+      api.sample(7).catch(() => ({ samples: [] })),
+    ]);
     if (!result) return;
     running = true;
     const cards = [...grid.children];
@@ -46,9 +52,20 @@ export function mount(stage, ctx) {
     if (result.result === "prize") setFace(cards[index], result.prize.emoji, result.prize.name);
     else setFace(cards[index], "🙏", "谢谢参与");
 
-    // 虚晃：两张未选中的牌面朝下轻抬示意，制造悬念但不剧透
+    // 其余牌面 = 按当前概率真实采样的分布
+    const others = cards.map((_, i) => i).filter((i) => i !== index);
+    const faces = (sampled.samples || []).slice(0, others.length);
+    while (faces.length < others.length) {
+      faces.push({ result: "thanks", name: "谢谢参与", emoji: "🙏" });
+    }
+    others.forEach((cardIndex, k) => {
+      const s = faces[k];
+      setFace(cards[cardIndex], s.emoji, s.name);
+    });
+
+    // 虚晃：两张未选中的牌面朝下轻抬示意
     if (!ctx.reduced) {
-      const decoys = cards.map((_, i) => i).filter((i) => i !== index);
+      const decoys = [...others];
       for (let d = 0; d < 2; d++) {
         const j = decoys.splice((Math.random() * decoys.length) | 0, 1)[0];
         cards[j].animate(
@@ -62,19 +79,23 @@ export function mount(stage, ctx) {
         ctx.fx.sound.tick(0.3);
         await sleep(160);
       }
-      await sleep(200);
+      await sleep(180);
     }
 
+    // 翻开主牌 = 开奖
     cards[index].classList.add("is-flipped");
     await sleep(ctx.reduced ? 100 : 620);
 
-    // 其余牌保持牌面不翻开，仅压暗——不铺一墙"谢谢参与"
-    cards.forEach((c, i) => {
-      if (i === index) return;
-      c.classList.add("is-dim");
+    // 其余牌依次翻开，展示真实的"如果翻它"分布，并压暗
+    others.forEach((cardIndex, k) => {
+      cards[cardIndex].classList.add("is-dim");
+      setTimeout(
+        () => cards[cardIndex].classList.add("is-flipped"),
+        ctx.reduced ? 0 : 120 + k * 90
+      );
     });
     cards[index].classList.add("is-result");
-    await sleep(ctx.reduced ? 150 : 750);
+    await sleep(ctx.reduced ? 150 : 1050);
 
     const choice = await ctx.reveal(result);
     ctx.refresh();
@@ -83,13 +104,13 @@ export function mount(stage, ctx) {
     if (choice === "again") setTimeout(() => grid.children[index % 8]?.click(), 200);
   }
 
-  const onTheme = () => render();
-  window.addEventListener("lucky:theme", onTheme);
+  const onPrizes = () => { if (!running) render(); };
+  window.addEventListener("lucky:prizes", onPrizes);
   render();
 
   return {
     destroy() {
-      window.removeEventListener("lucky:theme", onTheme);
+      window.removeEventListener("lucky:prizes", onPrizes);
     },
   };
 }

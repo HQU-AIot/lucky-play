@@ -130,6 +130,22 @@ def test_stock_remaining_cannot_exceed_total():
     assert r.status_code == 200
 
 
+def test_sample_interface_no_side_effect():
+    """翻牌旁位采样：返回 count 条、结构正确、不扣库存。"""
+    before = {p["id"]: p["remaining"] for p in client.get("/api/prizes").json()["prizes"]}
+    r = client.get("/api/sample?count=7")
+    assert r.status_code == 200
+    samples = r.json()["samples"]
+    assert len(samples) == 7
+    for s in samples:
+        assert s["result"] in ("prize", "thanks")
+        assert s["name"] and s["emoji"]
+    r2 = client.get("/api/sample?count=99")
+    assert r2.status_code == 422
+    after = {p["id"]: p["remaining"] for p in client.get("/api/prizes").json()["prizes"]}
+    assert after == before
+
+
 def test_static_mount_directories_exist():
     """被 mount 的静态目录必须存在（git 不追踪空目录，新检出环境要能启动）。"""
     from app.main import WEB_DIR

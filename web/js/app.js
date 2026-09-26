@@ -1,8 +1,8 @@
 /* 总调度：主题/玩法切换、抽奖锁、余量与战绩、活动信息。 */
 
-import { api } from "./api.js?v=4";
-import { fx } from "./fx.js?v=4";
-import { FORMS } from "./forms/index.js?v=4";
+import { api } from "./api.js?v=5";
+import { fx } from "./fx.js?v=5";
+import { FORMS } from "./forms/index.js?v=5";
 
 const THEMES = [
   { id: "festive", name: "红金福运", desc: "中式礼堂红灯笼下的鎏金转盘", swatches: ["#6D1420", "#E8434E", "#F5C451", "#FFF6E5"] },

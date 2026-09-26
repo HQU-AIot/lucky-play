@@ -42,6 +42,7 @@ uv run uvicorn app.main:app --port 8000   # 启动
 | --- | --- |
 | `GET /api/prizes` | **剩余奖品查询**：`{event, prizes:[{id,name,emoji,remaining,total}], total_remaining}` |
 | `POST /api/draw` | 抽奖，返回 `{result:"prize"\|"thanks", prize}`（服务端先定结果，前端动画精确到达） |
+| `GET /api/sample?count=7` | 按当前概率采样展示结果（无副作用、不扣库存），供翻牌旁位展示 |
 | `GET /api/meta` | 活动名 / 开奖日期 / 副标 |
 
 后台（请求头 `X-Admin-Token`；默认 `lucky-admin`，环境变量 `LUCKY_ADMIN_TOKEN` 覆盖）：
