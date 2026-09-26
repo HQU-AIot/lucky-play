@@ -1,7 +1,10 @@
-/* 形式三：盲盒。三只盒子点选其一 → 蓄力摇晃（振幅渐增）→
-   盖子弹飞 + 原地迸彩带 → 奖品 spring 弹出。 */
+/* 形式三：盲盒。三只盒子点选其一 → 长蓄力摇晃（振幅渐增，陪唱满 2.6s）→
+   盖子弹飞 + 原地迸彩带 → 奖品 spring 弹出。4s 卡准歌里的"停"。 */
 
 import { sleep, rand } from "../easing.js";
+import { RESULT_AT } from "../music.js?v=6";
+
+const SHAKE_MS = 2600; // 摇晃蓄力 = RESULT_AT − 开盖后展示时长
 
 export function mount(stage, ctx) {
   stage.innerHTML = `
@@ -41,18 +44,18 @@ export function mount(stage, ctx) {
   async function shake(box) {
     if (ctx.reduced) return;
     const frames = [];
-    const steps = 14;
+    const steps = 22;
     for (let i = 0; i <= steps; i++) {
       const p = i / steps;
-      const amp = 2 + 10 * p; // 振幅渐增
-      const tilt = Math.sin(p * Math.PI * 9) * amp;
+      const amp = 2 + 12 * p; // 振幅渐增
+      const tilt = Math.sin(p * Math.PI * 16) * amp;
       frames.push({
         transform: `translateX(${tilt}px) rotate(${tilt * 0.35}deg)`,
         offset: p,
         easing: "ease-in-out",
       });
     }
-    await box.animate(frames, { duration: 950 }).finished.catch(() => {});
+    await box.animate(frames, { duration: SHAKE_MS }).finished.catch(() => {});
   }
 
   async function open(index) {
@@ -77,7 +80,8 @@ export function mount(stage, ctx) {
       const rect = box.getBoundingClientRect();
       ctx.fx.confetti.burstAt(rect.left + rect.width / 2, rect.top + rect.height * 0.35);
     }
-    await sleep(ctx.reduced ? 150 : 950);
+    // 开盖后展示到 4s 整：歌里的"停"响起时奖品恰好完全亮相
+    await sleep(ctx.reduced ? 150 : RESULT_AT * 1000 - SHAKE_MS);
 
     const choice = await ctx.reveal(result);
     ctx.refresh();

@@ -1,10 +1,15 @@
 /* 形式六：扭蛋机。大机身（玻璃球舱满舱彩球 + 反光、出货口、投币口、品牌牌）。
-   转旋钮 → 球舱抖动彩球跳动 → 扭蛋掉落弹跳 → 摇晃蓄力 → 壳盖旋飞、奖品弹出。 */
+   转旋钮 → 球舱抖动彩球跳动 → 扭蛋掉落弹跳 → 摇晃蓄力 → 壳盖旋飞、奖品弹出。
+   时长对齐音乐：摇柄 2.2s + 落地 .55s + 蓄力 .5s，开壳恰在 RESULT_AT=4s"停"。 */
 
 import { sleep, rand } from "../easing.js";
+import { RESULT_AT } from "../music.js?v=6";
 
 // 真实扭蛋球的鲜艳塑料色，不随主题变化
 const BALL_COLORS = ["#FF5A5F", "#FFD166", "#4CC9F0", "#06D6A0", "#F78CDB", "#F7F7F7"];
+const CRANK_MS = 2200;  // 摇柄时长（与哒哒声循环对齐）
+const LAND_MS = 550;    // 扭蛋落地（与 base.css egg-land .55s 对齐）
+const QUIVER_MS = 500;  // 开壳前蓄力摇晃
 
 export function mount(stage, ctx) {
   stage.innerHTML = `
@@ -71,15 +76,15 @@ export function mount(stage, ctx) {
     running = true;
     knob.disabled = true;
 
-    // 1. 旋钮转动 + 球舱抖动 + 彩球跳动 + 哒哒声
+    // 1. 旋钮转动 + 球舱抖动 + 彩球跳动 + 哒哒声（陪唱 2.2s）
     if (!ctx.reduced) {
       machine.classList.add("is-cranking");
       knob.animate(
         [
           { transform: "rotate(0)" },
-          { transform: "rotate(720deg)" },
+          { transform: "rotate(1080deg)" },
         ],
-        { duration: 950, easing: "cubic-bezier(.3,.9,.3,1)" }
+        { duration: CRANK_MS, easing: "cubic-bezier(.3,.9,.3,1)" }
       );
       const balls = [...dome.querySelectorAll(".g-ball")];
       balls.forEach((b, i) => {
@@ -89,12 +94,12 @@ export function mount(stage, ctx) {
             { transform: `translateY(${-6 - (i % 4) * 5}px)` },
             { transform: "translateY(0)" },
           ],
-          { duration: 380, delay: (i % 5) * 90, easing: "ease-in-out", iterations: 2 }
+          { duration: 380, delay: (i % 6) * 140, easing: "ease-in-out", iterations: 4 }
         );
       });
-      for (let i = 0; i < 5; i++) {
-        ctx.fx.sound.tick(0.3 + i * 0.12);
-        await sleep(170);
+      for (let i = 0; i < CRANK_MS / 220; i++) {
+        ctx.fx.sound.tick(0.3 + i * 0.05);
+        await sleep(220);
       }
       machine.classList.remove("is-cranking");
     }
@@ -113,17 +118,17 @@ export function mount(stage, ctx) {
     if (!ctx.reduced) {
       egg.classList.remove("is-landed");
       egg.classList.add("is-quiver");
-      await sleep(520);
+      await sleep(QUIVER_MS);
       egg.classList.remove("is-quiver");
     }
 
-    // 4. 开壳：上盖旋飞，奖品弹出
+    // 4. 开壳：上盖旋飞，奖品弹出 —— 开壳瞬间正是歌里的"停"
     egg.classList.add("is-open");
     if (!ctx.reduced) {
       const r = egg.getBoundingClientRect();
       ctx.fx.confetti.burstAt(r.left + r.width / 2, r.top + r.height * 0.4);
     }
-    await sleep(ctx.reduced ? 200 : 950);
+    await sleep(ctx.reduced ? 200 : RESULT_AT * 1000 - CRANK_MS - LAND_MS - QUIVER_MS);
 
     const choice = await ctx.reveal(result);
     ctx.refresh();

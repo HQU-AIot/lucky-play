@@ -1,11 +1,16 @@
 /* 形式五：老虎机。右侧拉杆启动（点拉杆或按钮），三列滚轮错峰独立减速、
    高速模糊、逐格 tick；每列停定回弹，全部停齐时机身震动 + 顶灯跑马。
-   结果先行——落点格（index 0）内容提前替换为中奖奖品。 */
+   结果先行——落点格（index 0）内容提前替换为中奖奖品。
+   时长对齐音乐：末轮停定回弹后在 RESULT_AT=4s"停"齐开奖。 */
 
-import { easeOutCubic, rand } from "../easing.js";
+import { easeOutCubic, rand, sleep } from "../easing.js";
+import { RESULT_AT } from "../music.js?v=6";
 
 const CELLS = 24;
 const CELL_FALLBACK_H = 150;
+const LAST_DELAY = 520;   // 末轮启动延迟 ms
+const LAST_SPIN = 2900;   // 末轮滚动时长 ms（名义值，±50 抖动）
+const BOUNCE_MS = 240;    // 停定回弹 ms
 
 export function mount(stage, ctx) {
   stage.innerHTML = `
@@ -113,10 +118,10 @@ export function mount(stage, ctx) {
       );
     }
 
-    const delays = ctx.reduced ? [0, 60, 120] : [180, 430, 680];
+    const delays = ctx.reduced ? [0, 60, 120] : [140, 330, LAST_DELAY];
     const lapsBase = ctx.reduced ? 1 : 3;
     const durations = [0, 1, 2].map((col) =>
-      ctx.reduced ? 420 + col * 80 : 2500 + col * 850 + rand(-120, 120)
+      ctx.reduced ? 420 + col * 80 : 1900 + col * 500 + rand(-50, 50)
     );
     await Promise.all(
       reels.map((reel, col) =>
@@ -131,12 +136,16 @@ export function mount(stage, ctx) {
                 { transform: "translateY(18px)", offset: 0.45 },
                 { transform: "translateY(0)" },
               ],
-              { duration: 240, easing: "ease-in-out" }
+              { duration: BOUNCE_MS, easing: "ease-in-out" }
             ).finished.catch(() => {});
           }
         })()
       )
     );
+    // 补齐到 RESULT_AT：三灯停齐的瞬间正是歌里的"停"
+    if (!ctx.reduced) {
+      await sleep(RESULT_AT * 1000 - (LAST_DELAY + LAST_SPIN + BOUNCE_MS));
+    }
 
     // 全部停齐：机震 + 顶灯跑马 + 开闸音
     ctx.fx.sound.pop();

@@ -1,10 +1,13 @@
-/* 形式二：九宫格。3×3 外圈 8 格，高亮圈快→慢（步进间隔按 easeOutQuart 拉长），
-   ≥3 圈后精准停在结果格，停格脉冲 + 中奖呼吸灯。 */
+/* 形式二：九宫格。3×3 外圈 8 格，高亮圈快→慢（步进间隔按 2.2 次幂曲线拉长），
+   走灯总时长归一化为 RESULT_AT−定格 时长（与结果格远近无关），
+   精准停在结果格，定格脉冲 + 中奖呼吸灯，4s 卡准歌里的"停"。 */
 
-import { easeOutQuart, sleep } from "../easing.js";
+import { sleep } from "../easing.js";
+import { RESULT_AT } from "../music.js?v=6";
 
 // DOM 网格位置 0-8（中心为 4）中，顺时针外圈顺序
 const RING = [0, 1, 2, 5, 8, 7, 6, 3];
+const HOLD_MS = 750; // 中定格脉冲时长，走灯 = RESULT_AT*1000 − HOLD_MS
 
 export function mount(stage, ctx) {
   stage.innerHTML = `
@@ -59,6 +62,11 @@ export function mount(stage, ctx) {
 
     const laps = ctx.reduced ? 1 : 3;
     const steps = laps * 8 + target;
+    // 归一化：解出曲线系数，使 Σ(baseMs + curve·t^2.2) 恒等于走灯总时长
+    let curveSum = 0;
+    for (let k = 1; k <= steps; k++) curveSum += Math.pow(k / steps, 2.2);
+    const baseMs = 40;
+    const curveMs = (RESULT_AT * 1000 - HOLD_MS - baseMs * steps) / curveSum;
     let cursor = 0;
 
     for (let k = 1; k <= steps; k++) {
@@ -69,13 +77,13 @@ export function mount(stage, ctx) {
       const intensity = 1 - k / steps;
       ctx.fx.sound.tick(0.25 + intensity * 0.6);
       const t = k / steps;
-      await sleep(ctx.reduced ? 30 : 46 + 360 * Math.pow(t, 2.2));
+      await sleep(ctx.reduced ? 30 : baseMs + curveMs * Math.pow(t, 2.2));
     }
 
     const winCell = cells[RING[target]];
     winCell.classList.remove("is-lit");
     winCell.classList.add("is-lit", "is-winner");
-    await sleep(ctx.reduced ? 100 : 750);
+    await sleep(ctx.reduced ? 100 : HOLD_MS);
 
     const choice = await ctx.reveal(result);
     ctx.refresh();

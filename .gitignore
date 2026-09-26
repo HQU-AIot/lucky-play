@@ -9,3 +9,6 @@ data/*.db-shm
 uv.lock
 .DS_Store
 gui-test-screenshots/
+
+# 音乐原文件已复制到 web/assets/lucky-song.mp3，源目录不入库
+music/

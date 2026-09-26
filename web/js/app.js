@@ -1,8 +1,9 @@
 /* 总调度：主题/玩法切换、抽奖锁、余量与战绩、活动信息。 */
 
-import { api } from "./api.js?v=5";
-import { fx } from "./fx.js?v=5";
-import { FORMS } from "./forms/index.js?v=5";
+import { api } from "./api.js?v=6";
+import { fx } from "./fx.js?v=6";
+import { music } from "./music.js?v=6";
+import { FORMS } from "./forms/index.js?v=6";
 
 const THEMES = [
   { id: "festive", name: "红金福运", desc: "中式礼堂红灯笼下的鎏金转盘", swatches: ["#6D1420", "#E8434E", "#F5C451", "#FFF6E5"] },
@@ -84,7 +85,10 @@ const ctx = {
     state.busy = true;
     document.body.classList.add("is-busy");
     try {
-      return await api.draw();
+      const result = await api.draw();
+      // 结果到手即起播：动画与音乐同一起跑线，4s 处歌喊"停"时各玩法恰好出结果
+      music.startRound();
+      return result;
     } catch {
       fx.toast("网络开小差了，再试一次");
       state.busy = false;
@@ -94,7 +98,9 @@ const ctx = {
   },
   async reveal(result) {
     loadPrizes();
-    const choice = await fx.showResult(result);
+    const win = result.result === "prize";
+    if (win) music.winFade(); // 赶在歌里唱"没中"之前收歌
+    const choice = await fx.showResult(result, { musicRound: music.isPlaying() });
     state.busy = false;
     document.body.classList.remove("is-busy");
     return choice;
@@ -223,6 +229,21 @@ function init() {
     fx.sound.click();
   });
   paintSound();
+
+  music.preload();
+  const musicBtn = $("#btn-music");
+  const paintMusic = () => {
+    musicBtn.textContent = "🎵"; // 关闭态由 .is-off（降透明度）与 title 表达
+    musicBtn.classList.toggle("is-off", !music.enabled);
+    musicBtn.setAttribute("aria-pressed", String(music.enabled));
+    musicBtn.title = music.enabled ? "音乐开关（点击关闭）" : "音乐已关（点击开启）";
+  };
+  musicBtn.addEventListener("click", () => {
+    music.toggle();
+    paintMusic();
+    fx.sound.click();
+  });
+  paintMusic();
 
   applyTheme(state.theme, false);
   applyForm(state.form);

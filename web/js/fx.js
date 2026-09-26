@@ -318,7 +318,7 @@ const reveal = {
     });
   },
 
-  show(result) {
+  show(result, opts = {}) {
     const win = result.result === "prize";
     const card = document.getElementById("reveal-card");
     card.classList.toggle("is-thanks", !win);
@@ -334,7 +334,8 @@ const reveal = {
     if (win) {
       if (!reducedMotion()) confetti.cannons();
       sound.win();
-    } else {
+    } else if (!opts.musicRound) {
+      // 音乐在场时，"没中"+哭声就是判词，不再叠加默认谢谢音效
       sound.thanks();
     }
     return new Promise((resolve) => { this._resolve = resolve; });
@@ -377,7 +378,7 @@ export const fx = {
   setTheme(theme) {
     bgfx.setTheme(theme);
   },
-  async showResult(result) {
-    return reveal.show(result);
+  async showResult(result, opts = {}) {
+    return reveal.show(result, opts);
   },
 };

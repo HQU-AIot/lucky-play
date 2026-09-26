@@ -798,3 +798,6 @@ button { font-family: inherit; }
     transition-duration: .01ms !important;
   }
 }
+
+/* 工具栏开关关闭态（音乐） */
+.tool-btn.is-off { opacity: .45; }

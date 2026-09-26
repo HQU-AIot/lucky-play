@@ -1,9 +1,12 @@
 /* 形式四：翻牌。8 张暗牌，翻开哪张哪张就是一次真实抽奖（服务端扣库存）；
-   其余牌翻开显示按当前概率真实采样的奖品分布（/api/sample，无副作用），
-   让全场是"真实的可能性"，而不是千篇一律。 */
+   其余牌翻开显示按当前概率真实采样的奖品分布（/api/sample，无副作用）。
+   节奏对齐音乐：虚晃三连 + 主牌蓄力 3.3s，翻面完成恰在 RESULT_AT=4s"停"。 */
 
 import { sleep } from "../easing.js";
-import { api } from "../api.js?v=5";
+import { api } from "../api.js?v=6";
+import { RESULT_AT } from "../music.js?v=6";
+
+const FLIP_MS = 700; // 与 base.css .f-inner transition .7s 对齐
 
 export function mount(stage, ctx) {
   stage.innerHTML = `
@@ -63,30 +66,42 @@ export function mount(stage, ctx) {
       setFace(cards[cardIndex], s.emoji, s.name);
     });
 
-    // 虚晃：两张未选中的牌面朝下轻抬示意
+    // 虚晃三连：未选中的牌面朝下轻抬示意，陪歌铺垫悬念（逐张等动画播完再停顿）
     if (!ctx.reduced) {
       const decoys = [...others];
-      for (let d = 0; d < 2; d++) {
+      for (let d = 0; d < 3; d++) {
         const j = decoys.splice((Math.random() * decoys.length) | 0, 1)[0];
-        cards[j].animate(
-          [
-            { transform: "translateY(0) rotate(0)" },
-            { transform: "translateY(-12px) rotate(-2.5deg)", offset: 0.45 },
-            { transform: "translateY(0) rotate(0)" },
-          ],
-          { duration: 420, easing: "ease-out" }
-        );
-        ctx.fx.sound.tick(0.3);
-        await sleep(160);
+        await cards[j]
+          .animate(
+            [
+              { transform: "translateY(0) rotate(0)" },
+              { transform: "translateY(-12px) rotate(-2.5deg)", offset: 0.45 },
+              { transform: "translateY(0) rotate(0)" },
+            ],
+            { duration: 660, easing: "ease-out" }
+          )
+          .finished.catch(() => {});
+        ctx.fx.sound.tick(0.3 + d * 0.18);
+        await sleep(220);
       }
-      await sleep(180);
+      // 主牌蓄力呼吸：悬念推到"停"前一刻
+      cards[index].animate(
+        [
+          { transform: "scale(1)" },
+          { transform: "scale(1.05)" },
+          { transform: "scale(1)" },
+        ],
+        { duration: 660, easing: "ease-in-out" }
+      );
+      ctx.fx.sound.tick(0.75);
+      await sleep(660);
     }
 
-    // 翻开主牌 = 开奖
+    // 翻开主牌 = 开奖；翻面 transition .7s 完成 → 恰好 RESULT_AT"停"
     cards[index].classList.add("is-flipped");
-    await sleep(ctx.reduced ? 100 : 620);
+    await sleep(ctx.reduced ? 100 : FLIP_MS);
 
-    // 其余牌依次翻开，展示真实的"如果翻它"分布，并压暗
+    // 其余牌依次翻开，展示真实的"如果翻它"分布（哭声里的留影），并压暗
     others.forEach((cardIndex, k) => {
       cards[cardIndex].classList.add("is-dim");
       setTimeout(
@@ -95,7 +110,6 @@ export function mount(stage, ctx) {
       );
     });
     cards[index].classList.add("is-result");
-    await sleep(ctx.reduced ? 150 : 1050);
 
     const choice = await ctx.reveal(result);
     ctx.refresh();
