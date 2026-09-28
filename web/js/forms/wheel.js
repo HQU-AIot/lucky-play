@@ -90,14 +90,14 @@ export function mount(stage, ctx) {
       c.textAlign = "center";
       c.textBaseline = "middle";
       // emoji 挂在外圈
-      c.font = `${Math.max(20, size * 0.062)}px sans-serif`;
-      c.fillText(item.emoji, r * 0.74, 0);
+      c.font = `${Math.max(24, size * 0.07)}px sans-serif`;
+      c.fillText(item.emoji, r * 0.76, 0);
       // 名称沿半径排布
       c.fillStyle = isThanks ? pal.thanksInk : pal.ink;
-      c.font = `700 ${Math.max(11, size * 0.028)}px ${getComputedStyle(document.body).fontFamily}`;
+      c.font = `700 ${Math.max(14, size * 0.034)}px ${getComputedStyle(document.body).fontFamily}`;
       c.shadowColor = "rgba(0,0,0,.35)";
-      c.shadowBlur = 4;
-      const name = item.name.length > 7 ? item.name.slice(0, 7) : item.name;
+      c.shadowBlur = 6;
+      const name = item.name.length > 6 ? item.name.slice(0, 6) : item.name;
       c.fillText(name, r * 0.44, 0);
       c.restore();
     });

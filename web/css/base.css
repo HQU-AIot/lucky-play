@@ -284,7 +284,7 @@ button { font-family: inherit; }
 .wheel-hub:hover:not(:disabled) { transform: translate(-50%, -50%) scale(1.05); }
 .wheel-hub:disabled { cursor: wait; filter: saturate(.6) brightness(.9); }
 .wheel-hub:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
-.stage-hint { margin-top: 22px; font-size: 13px; color: var(--ink-dim); text-align: center; }
+.stage-hint { margin-top: 24px; font-size: 17px; font-weight: 600; letter-spacing: .05em; color: var(--ink); text-align: center; }
 
 /* ---------- 形式二：九宫格 ---------- */
 
