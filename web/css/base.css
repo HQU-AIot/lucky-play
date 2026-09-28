@@ -610,7 +610,16 @@ button { font-family: inherit; }
 @media (max-width: 640px) {
   .stage { padding: 12px 12px; }
   .wheel-hub { width: 88px; height: 88px; font-size: 20px; }
-  .topbar { padding-top: 14px; }
+  /* 窄屏标题与工具栏改为上下堆叠，避免重叠 */
+  .topbar {
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px 4px;
+  }
+  .topbar .toolbar {
+    position: static;
+    transform: none;
+  }
   .stage-hint { margin-top: 14px; }
   .wheel-box, .grid9-box { display: flex; flex-direction: column; align-items: center; }
 }
