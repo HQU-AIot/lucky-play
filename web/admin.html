@@ -61,6 +61,14 @@
   .log-item { display: flex; justify-content: space-between; gap: 10px; padding: 6px 2px; border-bottom: 1px dashed var(--line); font-size: 12.5px; }
   .log-item .ts { color: var(--dim); }
   .log-item.win { color: #9fe8c6; }
+  /* 库存直改：步进器 + 剩余/总量输入 + 补满 */
+  .stock-ctl { display: flex; align-items: center; gap: 4px; }
+  .st-btn { padding: 5px 10px; font-size: 14px; line-height: 1; background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; }
+  .st-btn:hover { filter: brightness(1.15); }
+  .stock-ctl input { width: 62px; padding: 6px 4px; text-align: center; }
+  .st-sep { color: var(--dim); }
+  .st-full { padding: 5px 10px; font-size: 12px; }
+  .prob-note { font-size: 11px; color: var(--warn); margin-left: 8px; white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -123,16 +131,16 @@
   </div>
 
   <div class="card">
-    <h2>奖品与概率 <span class="hint">权重为相对值，无需凑 100</span></h2>
+    <h2>奖品与概率 <span class="hint">权重为相对值；库存改动即时生效，无需保存</span></h2>
     <table>
       <thead><tr>
-        <th>奖品</th><th>基础权重</th><th>当前概率</th><th>剩余 / 总量</th><th>补货操作</th>
+        <th>奖品</th><th>基础权重</th><th>当前概率</th><th>库存（剩余 / 总量）</th>
       </tr></thead>
       <tbody id="prize-rows"></tbody>
     </table>
+    <p class="note" id="dyn-note" hidden></p>
     <div class="row" style="margin-top:14px">
       <button id="w-save">保存权重</button><span class="msg" id="w-msg"></span>
-      <button id="w-thanks-save" class="ghost">保存谢谢参与权重</button>
       <button id="replenish" class="ghost">全部补货</button>
     </div>
   </div>
@@ -207,19 +215,42 @@ function renderState(d) {
       <td><div style="display:flex;align-items:center">
         <div class="prob-bar"><i style="width:${(p.probability * 100).toFixed(1)}%"></i></div>
         <span class="prob-val">${(p.probability * 100).toFixed(1)}%</span></div></td>
-      <td>${p.remaining} / ${p.total_stock}</td>
-      <td><input type="number" min="0" step="1" class="stock-in" data-id="${p.id}" placeholder="补到" value=""></td>`;
+      <td><div class="stock-ctl" data-id="${p.id}">
+        <button type="button" class="st-btn" data-act="dec" title="剩余减一">−</button>
+        <input type="number" min="0" step="1" class="stock-in st-remaining" value="${p.remaining}" title="剩余">
+        <span class="st-sep">/</span>
+        <input type="number" min="0" step="1" class="stock-in st-total" value="${p.total_stock}" title="总量">
+        <button type="button" class="st-btn" data-act="inc" title="剩余加一">+</button>
+        <button type="button" class="ghost st-full" title="剩余补满到总量">补满</button>
+      </div></td>`;
     tbody.appendChild(tr);
   }
+  const bonusW = (d.thanks_bonus || 0).toFixed(2);
   const thanksTr = document.createElement("tr");
   thanksTr.innerHTML = `
     <td>🙏 谢谢参与</td>
     <td><input type="number" min="0" step="0.5" id="tw-row" value="${d.thanks_weight}"></td>
     <td><div style="display:flex;align-items:center">
       <div class="prob-bar"><i style="width:${(d.thanks_probability * 100).toFixed(1)}%"></i></div>
-      <span class="prob-val">${(d.thanks_probability * 100).toFixed(1)}%</span></div></td>
-    <td>不限量</td><td>—</td>`;
+      <span class="prob-val">${(d.thanks_probability * 100).toFixed(1)}%</span>
+      ${d.thanks_bonus > 0.0005 ? `<span class="prob-note" title="动态转移：奖品消耗的库存把权重让给了谢谢参与">含转移 +${bonusW} 权重</span>` : ""}
+    </div></td>
+    <td>不限量</td>`;
   tbody.appendChild(thanksTr);
+
+  // 动态转移解释：这是"权重 0 但概率不为 0"的来源，必须讲清
+  const dynNote = $("#dyn-note");
+  if (!d.dynamic_enabled) {
+    dynNote.textContent = "动态转移已关闭：奖品抽空后其权重直接退出奖池，不放给谢谢参与。";
+    dynNote.hidden = false;
+  } else if (d.thanks_bonus > 0.0005) {
+    dynNote.textContent = d.dynamic_mode === "depleted"
+      ? `谢谢参与概率 = 基础权重份额 + 动态转移（已让出 +${bonusW} 权重）：depleted 模式下奖品抽空后其全部权重一次性让给谢谢参与。权重设 0 时转移仍会产生概率；要恒为 0，请关闭动态转移。`
+      : `谢谢参与概率 = 基础权重份额 + 动态转移（已让出 +${bonusW} 权重）：奖品每消耗一份库存，就让出一份概率给谢谢参与。所以谢谢参与权重设为 0 时概率也不为 0；要让它恒为 0，请关闭动态转移。`;
+    dynNote.hidden = false;
+  } else {
+    dynNote.hidden = true;
+  }
 
   const grid = $("#stat-grid");
   const byPrize = d.stats.by_prize || {};
@@ -325,54 +356,75 @@ $("#w-save").addEventListener("click", async () => {
     await req("/api/admin/weights", { method: "PUT", body: JSON.stringify({
       weights, thanks_weight: tw === "" ? null : Number(tw),
     })});
-    flash("#w-msg", "权重已生效");
-    await loadAll();
-  } catch (e) { flash("#w-msg", "失败：" + e.message, false); }
-});
-
-$("#w-thanks-save").addEventListener("click", async () => {
-  try {
-    const weights = {};
-    document.querySelectorAll(".w-in").forEach((el) => { weights[el.dataset.id] = Number(el.value) || 0; });
-    await req("/api/admin/weights", { method: "PUT", body: JSON.stringify({
-      weights, thanks_weight: Number($("#tw-row").value) || 0,
-    })});
-    flash("#w-msg", "已生效");
+    flash("#w-msg", "权重已生效（含谢谢参与权重）");
     await loadAll();
   } catch (e) { flash("#w-msg", "失败：" + e.message, false); }
 });
 
 $("#prize-rows").addEventListener("keydown", (e) => {
   if (e.key === "Enter" && e.target.classList.contains("stock-in")) {
-    e.target.nextElementSibling?.click();
+    // 显式冒泡派发：Event 默认不冒泡，委托监听收不到
+    e.target.dispatchEvent(new Event("change", { bubbles: true }));
   }
 });
 
-document.addEventListener("click", async (e) => {
-  if (!e.target.classList.contains("stock-apply-btn")) return;
-  const id = e.target.dataset.id;
-  const input = document.querySelector(`.stock-in[data-id="${id}"]`);
-  if (!input || input.value === "") return;
-  try {
-    await req("/api/admin/stock", { method: "PUT", body: JSON.stringify({ id, remaining: Number(input.value) }) });
-    input.value = "";
-    flash("#w-msg", "库存已更新");
-    await loadAll();
-  } catch (err) { flash("#w-msg", "失败：" + err.message, false); }
+// ---- 库存直改：步进 / 输入 / 补满 即时生效（串行排队，防止快速点击乱序写库）----
+// edited = 本轮被编辑的字段，决定钳制方向（服务端约束剩余 ≤ 总量）
+let stockQueue = Promise.resolve();
+
+function queueStock(cell, edited = "remaining") {
+  const id = cell.dataset.id;
+  let remaining = Math.max(0, Math.round(Number(cell.querySelector(".st-remaining").value) || 0));
+  let total = Math.max(0, Math.round(Number(cell.querySelector(".st-total").value) || 0));
+  if (total < remaining) {
+    if (edited === "total") {
+      remaining = total;
+      flash("#w-msg", "剩余已随总量下调");
+    } else {
+      total = remaining;
+      flash("#w-msg", "总量已随剩余上调");
+    }
+    cell.querySelector(".st-remaining").value = remaining;
+    cell.querySelector(".st-total").value = total;
+  }
+  // 权重输入是"保存权重"制的半提交状态，不因库存刷新被重置：重渲染前快照、渲染后回填
+  const wSnap = {};
+  document.querySelectorAll(".w-in").forEach((el) => { wSnap[el.dataset.id] = el.value; });
+  const twEl = $("#tw-row");
+  const twSnap = twEl ? twEl.value : null;
+  stockQueue = stockQueue
+    .then(async () => {
+      await req("/api/admin/stock", { method: "PUT", body: JSON.stringify({ id, remaining, total }) });
+      await loadAll();
+      document.querySelectorAll(".w-in").forEach((el) => {
+        if (el.dataset.id in wSnap) el.value = wSnap[el.dataset.id];
+      });
+      const tw = $("#tw-row");
+      if (tw && twSnap !== null) tw.value = twSnap;
+    })
+    .catch((err) => flash("#w-msg", "失败：" + err.message, false));
+}
+
+$("#prize-rows").addEventListener("click", (e) => {
+  const btn = e.target.closest(".st-btn, .st-full");
+  if (!btn) return;
+  const cell = btn.closest(".stock-ctl");
+  const remInput = cell.querySelector(".st-remaining");
+  const total = Math.max(0, Math.round(Number(cell.querySelector(".st-total").value) || 0));
+  if (btn.classList.contains("st-full")) {
+    remInput.value = total;
+  } else {
+    const cur = Math.max(0, Math.round(Number(remInput.value) || 0));
+    remInput.value = btn.dataset.act === "dec" ? Math.max(0, cur - 1) : Math.min(total, cur + 1);
+  }
+  queueStock(cell, "remaining");
 });
 
-// 给每行补货输入框配一个应用按钮（渲染后绑定）
-new MutationObserver(() => {
-  document.querySelectorAll(".stock-in").forEach((input) => {
-    if (input.nextElementSibling?.classList.contains("stock-apply-btn")) return;
-    const btn = document.createElement("button");
-    btn.className = "ghost stock-apply-btn";
-    btn.dataset.id = input.dataset.id;
-    btn.textContent = "应用";
-    btn.style.cssText = "padding:6px 12px;font-size:12px;margin-left:6px";
-    input.after(btn);
-  });
-}).observe($("#prize-rows"), { childList: true, subtree: false });
+$("#prize-rows").addEventListener("change", (e) => {
+  if (e.target.classList.contains("stock-in")) {
+    queueStock(e.target.closest(".stock-ctl"), e.target.classList.contains("st-total") ? "total" : "remaining");
+  }
+});
 
 $("#replenish").addEventListener("click", async () => {
   try {

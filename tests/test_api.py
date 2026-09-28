@@ -92,6 +92,25 @@ def test_admin_stock_update():
     client.put("/api/admin/stock", json={"id": "shark", "remaining": 6}, headers=TOKEN)
 
 
+def test_admin_state_thanks_bonus_transfer():
+    """后台概率解释：满库存时转移量为 0；消耗库存后转移量 > 0；库存清零时该奖品概率为 0。"""
+    client.post("/api/admin/replenish", headers=TOKEN)  # 前面的测试可能已消耗库存
+    state = client.get("/api/admin/state", headers=TOKEN).json()
+    assert state["thanks_bonus"] == 0  # 满库存无转移
+    # 谢谢参与权重临时设 0，保证抽中奖品、库存必定消耗
+    client.put("/api/admin/weights", json={"weights": {}, "thanks_weight": 0}, headers=TOKEN)
+    client.post("/api/draw")
+    state = client.get("/api/admin/state", headers=TOKEN).json()
+    assert state["thanks_bonus"] > 0
+    # 库存清零的奖品概率必须为 0（所有模式下），转移量吃进它的基础权重
+    client.put("/api/admin/stock", json={"id": "gamesir", "remaining": 0}, headers=TOKEN)
+    state = client.get("/api/admin/state", headers=TOKEN).json()
+    gamesir = next(p for p in state["prizes"] if p["id"] == "gamesir")
+    assert gamesir["remaining"] == 0 and gamesir["probability"] == 0
+    client.post("/api/admin/replenish", headers=TOKEN)
+    client.put("/api/admin/weights", json={"weights": {}, "thanks_weight": 9}, headers=TOKEN)
+
+
 def test_negative_weight_rejected():
     r = client.put(
         "/api/admin/weights", json={"weights": {"shark": -1}}, headers=TOKEN

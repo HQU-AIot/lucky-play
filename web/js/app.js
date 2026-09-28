@@ -52,6 +52,14 @@ async function loadPrizes() {
 
 /* ---------- 抽奖上下文（交给各形式使用） ---------- */
 
+// 超级大奖 = 有限库存最少的奖品（老虎机的机器演出用同一判定；后台改库存即时跟随）
+function jackpotPrizeId() {
+  const stockOf = (p) => (p.total ?? p.total_stock ?? 0);
+  const finite = state.prizes.filter((p) => stockOf(p) > 0);
+  if (!finite.length) return null;
+  return finite.reduce((a, b) => (stockOf(b) < stockOf(a) ? b : a)).id;
+}
+
 const ctx = {
   reduced: fx.reducedMotion(),
   fx,
@@ -77,9 +85,10 @@ const ctx = {
     const win = result.result === "prize";
     const musicRound = music.isPlaying();
     // 中奖且音乐在场：歌播到后台配置的收刀点，收刀回调里响琶音——
-    // 琶音只此一处触发（fx 不再自行定时，避免双响叠加）
+    // 琶音只此一处触发（fx 不再自行定时，避免双响叠加）；超级大奖换更华丽的琶音
     const fanfareByMusic = win && musicRound;
-    if (fanfareByMusic) music.winStop(() => fx.sound.win());
+    const isJackpot = win && result.prize?.id === jackpotPrizeId();
+    if (fanfareByMusic) music.winStop(() => (isJackpot ? fx.sound.jackpot() : fx.sound.win()));
     const choice = await fx.showResult(result, { musicRound, fanfareByMusic });
     state.busy = false;
     return choice;

@@ -17,7 +17,7 @@ export const FORMS = {
     mount: grid.mount,
   },
   blindbox: {
-    id: "blindbox", icon: "🎁", name: "盲盒", desc: "亲手拆盒，摇晃爆开的一瞬间",
+    id: "blindbox", icon: "🎁", name: "盲盒", desc: "8 盒亮底乱序，盯住你想要的，选中哪只开哪只",
     mount: blindbox.mount,
   },
   flip: {

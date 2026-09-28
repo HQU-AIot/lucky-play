@@ -81,14 +81,13 @@ button { font-family: inherit; }
   width: 100%;
 }
 
+/* 舞台去卡片框：背景/边框/阴影全部拿掉，游戏直接浮在页面氛围层上。
+   --stage-bg 变量仍定义在 themes.css（暂无消费者，留作回退不删）。
+   保留内边距避免游戏贴边；overflow:hidden 继续兜住溢出装饰。 */
 .stage {
   min-height: 700px;
   display: grid; place-items: center;
   padding: 34px 24px;
-  border-radius: var(--radius-lg);
-  background: var(--stage-bg);
-  border: 1px solid var(--line);
-  box-shadow: var(--card-shadow);
   position: relative;
   overflow: hidden;
 }
@@ -226,7 +225,10 @@ button { font-family: inherit; }
 
 .wheel-wrap {
   position: relative;
-  width: min(680px, 92vw, 76vh);
+  /* 加大一档：px 上限 680→780；vh 因子 76→77（1366×768 投影下 77vh≈591px，
+     恰贴 stage 700px 高预算上限 592px[=700-上下 padding 68-提示语 40]，
+     再大会把 stage-hint 挤出可视区） */
+  width: min(780px, 94vw, 77vh);
   aspect-ratio: 1;
   margin: 0 auto;
 }
@@ -243,13 +245,13 @@ button { font-family: inherit; }
   position: absolute; top: -34px; left: 50%;
   transform: translateX(-50%);
   z-index: 5;
-  width: 44px; height: 58px;
+  width: 48px; height: 64px;   /* +10%：44×58 → 48×64（悬挑深度 -34px 不变，stage padding 34px 恰容纳） */
   transform-origin: 50% 16%;
   pointer-events: none;
   filter: drop-shadow(0 5px 7px rgba(0,0,0,.38));
 }
 .wheel-pointer .ptr-knob {
-  display: block; width: 36px; height: 36px; margin: 0 auto;
+  display: block; width: 40px; height: 40px; margin: 0 auto;
   border-radius: 50%;
   background: radial-gradient(circle at 32% 28%,
     color-mix(in srgb, var(--accent) 45%, #ffffff), var(--accent) 62%);
@@ -258,23 +260,23 @@ button { font-family: inherit; }
   position: relative; z-index: 2;
 }
 .wheel-pointer .ptr-tip {
-  display: block; width: 0; height: 0; margin: -9px auto 0;
-  border-left: 10px solid transparent;
-  border-right: 10px solid transparent;
-  border-top: 24px solid var(--accent);
+  display: block; width: 0; height: 0; margin: -10px auto 0;
+  border-left: 11px solid transparent;
+  border-right: 11px solid transparent;
+  border-top: 26px solid var(--accent);
 }
 .wheel-pointer.tick { animation: pointer-hit .3s cubic-bezier(.34,1.56,.64,1); }
 .wheel-hub {
   position: absolute; left: 50%; top: 50%;
   transform: translate(-50%, -50%);
   z-index: 4;
-  width: 124px; height: 124px;
+  width: 140px; height: 140px;   /* 124→140，随转盘加大 */
   border-radius: 50%;
   border: 4px solid var(--hub-ring, rgba(255,255,255,.75));
   background: var(--btn-bg);
   color: var(--btn-ink);
   font-family: var(--font-display);
-  font-size: 27px; font-weight: 900; letter-spacing: .12em; text-indent: .12em;
+  font-size: 29px; font-weight: 900; letter-spacing: .12em; text-indent: .12em;
   cursor: pointer;
   box-shadow: 0 8px 26px rgba(0,0,0,.35), inset 0 -4px 10px rgba(0,0,0,.2);
   transition: transform .15s ease, filter .2s ease;
@@ -290,7 +292,9 @@ button { font-family: inherit; }
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 14px;
-  width: min(560px, 92vw, 66vh);
+  /* 加大一档，与转盘同口径：560/92vw/66vh → 640/94vw/74vh
+     （768 高投影下 74vh≈568px，格高 180px，stage 内含提示语仍完整） */
+  width: min(640px, 94vw, 74vh);
   aspect-ratio: 1;
 }
 .g-cell {
@@ -331,9 +335,8 @@ button { font-family: inherit; }
 .g-hub:disabled { cursor: wait; filter: saturate(.6); }
 .g-hub:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 
-/* ---------- 形式三：盲盒 ---------- */
+/* ---------- 形式三：盲盒（造型规则供 blindbox.css 的 8 盒网格复用） ---------- */
 
-.box-row { display: flex; gap: clamp(14px, 4vw, 30px); align-items: flex-end; justify-content: center; }
 .box {
   position: relative;
   width: clamp(118px, 24vw, 166px);
@@ -399,8 +402,6 @@ button { font-family: inherit; }
 .box.is-open .box-q { opacity: 0; transform: scale(.4); }
 .box.is-open .box-prize { animation: prize-pop .7s cubic-bezier(.34,1.56,.64,1) .15s both; }
 .box:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; border-radius: 14px; }
-
-.blindbox-cta { margin-top: 26px; text-align: center; font-size: 14px; color: var(--ink-dim); letter-spacing: .1em; }
 
 /* ---------- 形式四：翻牌 ---------- */
 
@@ -555,6 +556,34 @@ button { font-family: inherit; }
   background: radial-gradient(circle at 32% 28%, var(--accent-2, #fff), var(--accent) 70%);
   box-shadow: inset -5px -8px 12px rgba(0,0,0,.3), 0 6px 14px rgba(0,0,0,.35);
 }
+
+/* ---- 超级大奖演出（slot.js 在大奖轮加 .is-jackpot 驱动，弹窗关闭后移除） ---- */
+
+/* 大奖顶灯：金色底 + 亮度脉冲 + 轻微 scale 狂闪。
+   与 .is-party 的 marquee-party 同特异性(0,3,0)，靠源码顺序在后覆盖其动画 */
+.slot-machine.is-jackpot .slot-marquee {
+  background: linear-gradient(180deg, #FFE9A8, #F5C451 55%, #D89A2B);
+  color: #5C3A00;
+  animation: marquee-jackpot .38s ease-in-out infinite;
+}
+@keyframes marquee-jackpot {
+  0%, 100% { filter: brightness(1); transform: scale(1); }
+  50% {
+    filter: brightness(1.6) saturate(1.35);
+    transform: scale(1.05);
+    box-shadow: 0 0 34px rgba(255,200,64,.95), 0 0 72px rgba(255,170,0,.55);
+  }
+}
+
+/* 大奖机身：金色光环 box-shadow 脉冲（各帧保留原 card-shadow，防止阴影跳变） */
+.slot-machine.is-jackpot { animation: machine-jackpot-ring 1.1s ease-in-out infinite; }
+@keyframes machine-jackpot-ring {
+  0%, 100% { box-shadow: var(--card-shadow), 0 0 0 rgba(255,197,66,0); }
+  50% { box-shadow: var(--card-shadow), 0 0 0 5px rgba(255,197,66,.55), 0 0 44px rgba(255,170,0,.6); }
+}
+
+/* 大奖落点格：三钻连线微光（图案由 slot.js 替换为 💎，奖品名保留） */
+.slot-cell .sc-emoji.sc-jackpot-gem { filter: drop-shadow(0 0 14px rgba(255,197,66,.95)); }
 
 /* ---------- 形式六：扭蛋机 ---------- */
 
@@ -775,8 +804,8 @@ button { font-family: inherit; }
   .stage { min-height: 460px; padding: 22px 12px; }
   .wheel-hub { width: 88px; height: 88px; font-size: 20px; }
   .topbar { padding-top: 14px; }
-  .stage-hint, .blindbox-cta, .flip-cta { margin-top: 14px; }
-  .wheel-box, .grid9-box, .blindbox-box, .flip-box { display: flex; flex-direction: column; align-items: center; }
+  .stage-hint, .flip-cta { margin-top: 14px; }
+  .wheel-box, .grid9-box, .flip-box { display: flex; flex-direction: column; align-items: center; }
 }
 
 /* ---------- 降低动态效果 ---------- */

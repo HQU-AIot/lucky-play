@@ -163,7 +163,10 @@ def sample_results(count: int = Query(default=7, ge=1, le=20)):
 def admin_state():
     dyn_enabled, dyn_mode = _dyn()
     specs = store.specs()
-    probs = probability_table(specs, _thanks_weight(), dyn_enabled, dyn_mode)
+    tw = _thanks_weight()
+    probs = probability_table(specs, tw, dyn_enabled, dyn_mode)
+    # 动态转移量（权重口径）= 谢谢参与有效权重 - 基础权重，供后台解释概率来源
+    _, thanks_eff = effective_weights(specs, tw, dyn_enabled, dyn_mode)
     return {
         "prizes": [
             {
@@ -177,8 +180,9 @@ def admin_state():
             }
             for p in store.list_prizes()
         ],
-        "thanks_weight": _thanks_weight(),
+        "thanks_weight": tw,
         "thanks_probability": round(probs.get("thanks", 0.0), 4),
+        "thanks_bonus": round(max(0.0, thanks_eff - tw), 4),
         "dynamic_enabled": dyn_enabled,
         "dynamic_mode": dyn_mode,
         "win_stop_at": _safe_float(store.get_config().get("win_stop_at"), 5.5),

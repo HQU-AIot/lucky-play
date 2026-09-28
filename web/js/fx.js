@@ -67,6 +67,25 @@ const sound = {
     this.blip(1318.5, 0.4, "triangle", 0.06, notes.length * 0.095);
   },
 
+  /* 超级大奖琶音：比 win() 更华丽——C5-E5-G5-C6-E6 快速上行 + 高八度回声强调
+     + 结尾 C6 长音和弦 + 高频 shimmer 碎音。供主线程在大奖轮的音乐收刀回调里
+     替换 sound.win() 使用；slot 演出层自身不调用（避免与收刀琶音撞车，
+     音乐未开启的大奖轮保持纯视觉静音——取舍已与主线程约定）。 */
+  jackpot() {
+    const notes = [523.25, 659.25, 783.99, 1046.5, 1318.5];
+    notes.forEach((f, i) => this.blip(f, 0.16, "triangle", 0.07, i * 0.08));
+    // 高八度回声强调
+    notes.forEach((f, i) => this.blip(f * 2, 0.12, "sine", 0.04, 0.42 + i * 0.06));
+    // 结尾长音：C6 主音 + E6/G6 叠出和弦感
+    this.blip(1046.5, 0.9, "triangle", 0.07, 0.78);
+    this.blip(1318.5, 0.9, "sine", 0.045, 0.78);
+    this.blip(1567.98, 0.9, "sine", 0.035, 0.78);
+    // 高频 shimmer：玻璃质感碎音收尾
+    for (let i = 0; i < 6; i++) {
+      this.blip(2093 + i * 173, 0.1, "sine", 0.02, 0.95 + i * 0.07);
+    }
+  },
+
   thanks() {
     this.blip(329.63, 0.28, "sine", 0.05);
     this.blip(261.63, 0.42, "sine", 0.045, 0.16);

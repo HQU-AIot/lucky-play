@@ -1,7 +1,9 @@
 /* 形式五：老虎机。右侧拉杆启动（点拉杆或按钮），三列滚轮错峰独立减速、
    高速模糊、逐格 tick；每列停定回弹，全部停齐时机身震动 + 顶灯跑马。
    结果先行——落点格（index 0）内容提前替换为中奖奖品。
-   时长对齐音乐：末轮停定回弹后在 RESULT_AT=5s"停"齐开奖。 */
+   时长对齐音乐：末轮停定回弹后在 RESULT_AT=5s"停"齐开奖。
+   超级大奖：命中当前有限库存最少的奖品时，顶灯切"超级大奖"金字狂闪 +
+   机身金环脉冲 + 三钻连线落点格 + 加码彩带；纯视觉，琶音交给 app.js 收刀回调。 */
 
 import { easeOutCubic, rand, sleep } from "../easing.js";
 import { RESULT_AT } from "../music.js?v=10";
@@ -11,6 +13,26 @@ const CELL_FALLBACK_H = 150;
 const LAST_DELAY = 520;   // 末轮启动延迟 ms
 const LAST_SPIN = 3900;   // 末轮滚动时长 ms（名义值，±50 抖动）
 const BOUNCE_MS = 240;    // 停定回弹 ms
+const MARQUEE_DEFAULT = "★ 幸运老虎机 ★";
+const MARQUEE_JACKPOT = "★ 超级大奖 ★";
+
+/* 超级大奖判定：有限库存（total>0 且有限）中最小库存的奖品，排除谢谢参与。
+   每次 spin 重新计算——后台改库存后下一轮自动跟随。
+   注：公开 /api/prizes 下发的库存字段是 total（管理端叫 total_stock），两者同义。 */
+function findJackpotPrize(items) {
+  let best = null;
+  let bestTotal = Infinity;
+  for (const it of items) {
+    if (it.id === "thanks") continue;
+    const total = Number(it.total ?? it.total_stock);
+    if (!Number.isFinite(total) || total <= 0) continue;
+    if (total < bestTotal) {
+      best = it;
+      bestTotal = total;
+    }
+  }
+  return best;
+}
 
 export function mount(stage, ctx) {
   stage.innerHTML = `
@@ -38,6 +60,7 @@ export function mount(stage, ctx) {
     </div>`;
 
   const machineEl = stage.querySelector(".slot-machine");
+  const marqueeSpan = stage.querySelector(".slot-marquee span");
   const lever = stage.querySelector(".slot-lever");
   const leverArm = stage.querySelector(".lever-arm");
   const btn = stage.querySelector(".slot-btn");
@@ -96,10 +119,15 @@ export function mount(stage, ctx) {
     const items = ctx.items();
     const id = result.result === "prize" ? result.prize.id : "thanks";
     const winner = items.find((it) => it.id === id) || items[items.length - 1];
-    // 三列首格（落点窗口）都放中奖奖品
+    // 超级大奖判定：本轮命中的恰是"当前有限库存最少"的奖品（每轮重算）
+    const jackpotPrize = findJackpotPrize(items);
+    const isJackpot = Boolean(jackpotPrize) && winner.id === jackpotPrize.id;
+    // 三列首格（落点窗口）都放中奖奖品；大奖轮改"三钻连线"——图案统一替换为 💎、
+    // 奖品名保留，弹窗关闭后 buildReels() 重建滚轮即自动复原
     reels.forEach((reel) => {
       const first = reel.firstElementChild;
-      first.innerHTML = `<span class="sc-emoji">${winner.emoji}</span><span class="sc-name">${winner.name}</span>`;
+      const emoji = isJackpot ? "💎" : winner.emoji;
+      first.innerHTML = `<span class="sc-emoji${isJackpot ? " sc-jackpot-gem" : ""}">${emoji}</span><span class="sc-name">${winner.name}</span>`;
     });
 
     btn.disabled = true;
@@ -162,8 +190,25 @@ export function mount(stage, ctx) {
       );
     }
     machineEl.classList.add("is-party");
+    if (isJackpot) {
+      // 超级大奖演出：顶灯切"超级大奖"金字狂闪 + 机身金环脉冲（样式见 base.css）。
+      // 此处刻意不响琶音——中奖轮的胜利琶音由 app.js 在音乐收刀回调里统一触发
+      // （fanfareByMusic 机制），slot 层再响会撞音；音乐未开启的大奖轮保持纯视觉
+      // 静音（一致性取舍已与主线程约定，华丽版琶音 sound.jackpot() 留给主线程替换用）。
+      marqueeSpan.textContent = MARQUEE_JACKPOT;
+      machineEl.classList.add("is-jackpot");
+    }
     btn.disabled = false;
     lever.style.pointerEvents = "";
+
+    // 弹窗出场前的最后一步：超级大奖加码彩带——全屏双炮 + 机身中心环形爆。
+    // ctx.reveal 弹窗在下一拍打开，此处同步触发，不改变 RESULT_AT=5s 的对齐时序；
+    // 弹窗对所有中奖还会再放一波双炮——大奖轮合计三波，刻意的"超级"密度，非重复触发
+    if (isJackpot && !ctx.reduced) {
+      const box = machineEl.getBoundingClientRect();
+      ctx.fx.confetti.cannons();
+      ctx.fx.confetti.burstAt(box.left + box.width / 2, box.top + box.height / 2);
+    }
   }
 
   async function start() {
@@ -174,18 +219,24 @@ export function mount(stage, ctx) {
     running = true;
     try {
       await spin(result);
+      // 弹窗在此出场（reveal 内部时机不变，RESULT_AT 对齐不受影响）；
+      // 演出视觉（is-party/is-jackpot/落点格）保留整个弹窗期间，
+      // 待弹窗关闭后（或异常中断时）由 finally 统一复原
+      const choice = await ctx.reveal(result);
+      ctx.refresh();
+      if (choice === "again") setTimeout(() => btn.click(), 200);
     } finally {
       // 任何异常下都恢复交互，避免拉杆/按钮永久禁用
-      windows.forEach((w) => w.classList.remove("is-set"));
-      machineEl.classList.remove("is-party");
       btn.disabled = false;
       lever.style.pointerEvents = "";
+      // 复原演出：marquee 文字、庆祝/大奖类、落点格（滚轮重建恢复常规图案）。
+      // 不能在 spin 返回时就清理——那时弹窗尚未出现，狂闪/跑马会被提前掐掉
+      windows.forEach((w) => w.classList.remove("is-set"));
+      machineEl.classList.remove("is-party", "is-jackpot");
+      marqueeSpan.textContent = MARQUEE_DEFAULT;
+      buildReels();
+      running = false;
     }
-    const choice = await ctx.reveal(result);
-    ctx.refresh();
-    running = false;
-    buildReels();
-    if (choice === "again") setTimeout(() => btn.click(), 200);
   }
 
   btn.addEventListener("click", start);
