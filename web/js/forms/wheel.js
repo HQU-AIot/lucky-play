@@ -90,15 +90,15 @@ export function mount(stage, ctx) {
       c.textAlign = "center";
       c.textBaseline = "middle";
       // emoji 挂在外圈
-      c.font = `${Math.max(24, size * 0.07)}px sans-serif`;
-      c.fillText(item.emoji, r * 0.76, 0);
+      c.font = `${Math.max(26, size * 0.078)}px sans-serif`;
+      c.fillText(item.emoji, r * 0.78, 0);
       // 名称沿半径排布
       c.fillStyle = isThanks ? pal.thanksInk : pal.ink;
-      c.font = `700 ${Math.max(14, size * 0.034)}px ${getComputedStyle(document.body).fontFamily}`;
+      c.font = `700 ${Math.max(15, size * 0.038)}px ${getComputedStyle(document.body).fontFamily}`;
       c.shadowColor = "rgba(0,0,0,.35)";
       c.shadowBlur = 6;
       const name = item.name.length > 6 ? item.name.slice(0, 6) : item.name;
-      c.fillText(name, r * 0.44, 0);
+      c.fillText(name, r * 0.455, 0);
       c.restore();
     });
   }

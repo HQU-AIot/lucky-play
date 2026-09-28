@@ -1,40 +1,52 @@
-/* 形式三：盲盒（8 盒亮底 + 疯狂乱序）。开局 8 只盒子全部亮出奖品标签（奖品固定可见），
-   玩家点选一只后：全部标签迅速翻面成"?"——服务器结果此刻已定，翻面是为了藏起
-   "结果与盒子"的对应关系，制造记忆挑战——随后其余 7 只疯狂两两换位（先密后疏），
-   选中盒原地剧烈摇晃，盖子顶飞迸彩带。总时长卡 RESULT_AT=5s 出弹窗，恰逢歌里喊"停"。
-   弹窗关闭后其余盒子按 /api/sample 真实采样翻开，展示"如果选它们"的分布。 */
+/* 形式三：盲盒 v3（亮底 → 开始打乱 → 选盒开奖）。
+   待选阶段 8 只盒子亮出奖品标签（奖品固定可见），点"开始打乱"的一瞬标签全部
+   翻面成"?"——打乱全程不显示内容，8 只盲盒两两换位 14 次（90→240ms 先密后疏、
+   弧线甩动轨迹）纯粹烘气氛；停下后盒子呼吸脉动邀请选盒，玩家任选一只的那一刻
+   才 ctx.draw() 起播音乐：上浮金环锁定 → 渐强摇晃 → 末段剧烈抖动 → 4.35s 开盖
+   迸彩带 → 5s"停"整弹窗出场（RESULT_AT 兜底对齐）。弹窗关闭后其余盒按
+   /api/sample 真实采样翻开，展示"如果选它们"的分布。 */
 
 import { sleep, lerp } from "../easing.js";
 import { RESULT_AT } from "../music.js?v=10";
 import { api } from "../api.js?v=10";
 
-/* 时间轴：0 翻面 → 250 换位 → 2650 摇晃 → 3450 开盖 → 5000 弹窗（RESULT_AT 兜底对齐） */
-const FLIP_MS = 250;       // 标签翻面成"?"的时长
-const SHUFFLE_MS = 2400;   // 换位阶段总预算（含戛然而止后的定拍）
-const SHUFFLE_COUNT = 8;   // 两两交换次数（设计区间 7-9 次，取中）
-const SWAP_GAP_MIN = 140;  // 换位间隔下限（先密）
-const SWAP_GAP_MAX = 380;  // 换位间隔上限（后疏）
-const SWAP_MOVE_MAX = 320; // 单次换位移动时长上限（须小于间隔，连环交换才不跳变）
-const SHAKE_MS = 800;      // 选中盒剧烈摇晃
-const LID_MS = 640;        // 盖子被顶飞翻滚落地的时长（纯视觉，与展示期重叠）
-const POP_AT = FLIP_MS + SHUFFLE_MS + SHAKE_MS; // 开盖时刻 ≈3450ms
-const REDUCED_OPEN_MS = 400; // 减动效路径：翻面后短暂停顿即开盒
-const REVEAL_STEP_MS = 90;   // 弹窗关闭后揭底的错峰间隔
+/* 选中后悬念段时间轴：0 上浮锁定 → 300 渐强摇晃 → 3600 末段抖动 → 4050 定拍
+   → 4350 开盖 → 5000 弹窗（RESULT_AT 兜底对齐，恰逢歌里喊"停"） */
+const LIFT_MS = 300;       // 选中盒上浮 + 金环锁定
+const SHAKE_MS = 3300;     // 渐强摇晃（伴随加速 tick 声，悬念主段）
+const RATTLE_MS = 450;     // 末段剧烈抖动
+const SETTLE_MS = 300;     // 开盖前定拍（屏息一拍）
+const POP_AT = LIFT_MS + SHAKE_MS + RATTLE_MS + SETTLE_MS; // ≈4350ms 开盖
+const LID_MS = 640;        // 盖子顶飞翻滚时长（纯视觉，与展示期重叠）
+const FLIP_MS = 250;       // 开始打乱时标签翻面成"?"的时长
+
+/* 打乱阶段：8 只全动，14 次两两交换，间隔 90→240ms 先密后疏；
+   移动走弧线（中点垂直偏移 + 轻旋），时长压在间隔以内 */
+const SWAPS = 14;
+const GAP_MIN = 90;
+const GAP_MAX = 240;
+const MOVE_FACTOR = 0.9;   // 单次移动时长 = 间隔 × 0.9，连环交换才不跳变
+
+const REDUCED_SHUFFLE_MS = 300; // 减动效：象征性换位停顿
+const REDUCED_OPEN_MS = 400;    // 减动效：选中后短暂停顿即开盒
+const REVEAL_STEP_MS = 90;      // 弹窗关闭后揭底的错峰间隔
 
 /* 布局：4×2 网格（窄屏 2 列），盒子绝对定位、left/top 由 JS 按格位计算——
    换位 = 改坐标 + WAAPI 补间，比 FLIP 记录还原更简单可靠 */
 const GRID_GAP = 16;
-const BOX_RATIO = 0.88; // 盒高/盒宽：8 盒比旧 3 盒扁一些
-const NARROW_PX = 560;  // 窄屏阈值：以下改 2 列
+const BOX_RATIO = 0.88;
+const NARROW_PX = 560;
 
 export function mount(stage, ctx) {
   stage.innerHTML = `
     <div class="bb-wrap">
       <div class="bb-grid"></div>
-      <p class="stage-hint">亮出的奖品会疯狂换位——盯住它，选中哪只开哪只</p>
+      <button type="button" class="btn-primary bb-start">开始打乱</button>
+      <p class="stage-hint">点开始打乱，停下后凭记忆选一只盒子</p>
     </div>`;
   const grid = stage.querySelector(".bb-grid");
-  let running = false;
+  const startBtn = stage.querySelector(".bb-start");
+  let phase = "attract"; // attract → shuffle → pick → reveal → attract
   let dead = false;
   let geometry = null;
   const timers = [];
@@ -42,6 +54,7 @@ export function mount(stage, ctx) {
   function render() {
     const all = ctx.items();
     const items = all.slice(0, 8);
+    phase = "attract";
     grid.innerHTML = "";
     items.forEach((item, i) => {
       const box = document.createElement("button");
@@ -55,9 +68,11 @@ export function mount(stage, ctx) {
         <span class="bb-face"><span class="bb-emoji">${item.emoji}</span><span class="bb-name">${item.name}</span></span>
         <span class="box-q">?</span>
         <span class="box-prize"></span>`;
-      box.addEventListener("click", () => open(i));
+      box.addEventListener("click", () => pick(i));
       grid.appendChild(box);
     });
+    startBtn.disabled = false;
+    startBtn.textContent = "开始打乱";
     // 奖品超过 7+谢谢参与时盒面放不下：明示"看得到的只有前 8 项，但抽奖池是全量"
     if (all.length > 8) {
       stage.querySelector(".stage-hint").textContent =
@@ -116,35 +131,36 @@ export function mount(stage, ctx) {
     return faces;
   }
 
-  async function shake(box) {
-    // 剧烈摇晃：比旧 3 盒版振幅更大、频率更高，0.8s 内推到蓄力顶点
-    const frames = [];
-    const steps = 18;
-    for (let i = 0; i <= steps; i++) {
-      const p = i / steps;
-      const amp = 3 + 15 * p;
-      const tilt = Math.sin(p * Math.PI * 14) * amp;
-      frames.push({
-        transform: `translateX(${tilt}px) rotate(${tilt * 0.4}deg)`,
-        offset: p,
-        easing: "ease-in-out",
-      });
-    }
-    await box.animate(frames, { duration: SHAKE_MS }).finished.catch(() => {});
-  }
-
-  /* 两只盒子互换格位：WAAPI translate 补间过去，动画落定后同步逻辑槽位，
+  /* 弧线换位：中点带垂直偏移 + 轻旋，比直线更像"甩"；动画落定后同步逻辑槽位，
      后续连环交换才从正确的视觉位置起步（不走样、不跳变） */
-  function swap(a, b, dur) {
+  function swapArc(a, b, dur) {
     const from = slotXY(a._slot);
     const to = slotXY(b._slot);
     const dx = to.x - from.x;
     const dy = to.y - from.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const px = -dy / len, py = dx / len; // 垂直于连线方向
+    const lift = (Math.random() < 0.5 ? -1 : 1) * Math.min(34, len * 0.18);
+    const midAx = dx / 2 + px * lift;
+    const midAy = dy / 2 + py * lift;
+    const tilt = lift > 0 ? 5 : -5;
     const opts = { duration: dur, easing: "cubic-bezier(.3,.7,.35,1)" };
     const animA = a.animate(
-      [{ transform: "translate(0,0)" }, { transform: `translate(${dx}px, ${dy}px)` }], opts);
+      [
+        { transform: "translate(0,0) rotate(0)" },
+        { transform: `translate(${midAx}px, ${midAy}px) rotate(${tilt}deg)`, offset: 0.5 },
+        { transform: `translate(${dx}px, ${dy}px) rotate(0)` },
+      ],
+      opts
+    );
     const animB = b.animate(
-      [{ transform: "translate(0,0)" }, { transform: `translate(${-dx}px, ${-dy}px)` }], opts);
+      [
+        { transform: "translate(0,0) rotate(0)" },
+        { transform: `translate(${-midAx}px, ${-midAy}px) rotate(${-tilt}deg)`, offset: 0.5 },
+        { transform: `translate(${-dx}px, ${-dy}px) rotate(0)` },
+      ],
+      opts
+    );
     // finished 必须接 catch：换位中途切玩法时 DOM 已移除，拒绝不能变成 unhandled rejection
     animA.finished.catch(() => {});
     animB.finished.catch(() => {});
@@ -155,18 +171,61 @@ export function mount(stage, ctx) {
     });
   }
 
-  /* 疯狂换位：两两交换 SHUFFLE_COUNT 次，间隔 140→380ms 先密后疏；
-     移动时长压在间隔以内，每步耗时即间隔，节奏稳定推进 */
-  async function shuffle(movers) {
-    for (let i = 0; i < SHUFFLE_COUNT; i++) {
-      const p = i / (SHUFFLE_COUNT - 1);
-      const gap = lerp(SWAP_GAP_MIN, SWAP_GAP_MAX, p);
-      const a = movers[(Math.random() * movers.length) | 0];
+  /* 疯狂打乱：8 只全部参与，14 次两两交换（随机配对、可连续动同一只），
+     间隔 90→240ms 先密后疏，哒哒声随节奏渐强——内容全程隐藏，纯盲选仪式感 */
+  async function shuffle(boxes) {
+    for (let i = 0; i < SWAPS; i++) {
+      if (dead) return; // 打乱中切玩法：立刻收声，别在新玩法上继续响
+      const p = i / (SWAPS - 1);
+      const gap = lerp(GAP_MIN, GAP_MAX, p);
+      const a = boxes[(Math.random() * boxes.length) | 0];
       let b = a;
-      while (b === a) b = movers[(Math.random() * movers.length) | 0];
-      if (i > 1) ctx.fx.sound.tick(0.25 + p * 0.4); // 换位哒哒声随节奏渐强
-      await Promise.all([swap(a, b, Math.min(gap * 0.85, SWAP_MOVE_MAX)), sleep(gap)]);
+      while (b === a) b = boxes[(Math.random() * boxes.length) | 0];
+      ctx.fx.sound.tick(0.35 + p * 0.55);
+      await Promise.all([swapArc(a, b, gap * MOVE_FACTOR), sleep(gap)]);
     }
+  }
+
+  /* 选中后悬念主段：振幅 2→18 的渐强摇晃，配 10 记间隔 330ms 的加速 tick */
+  async function shakeRamp(box) {
+    const tickLoop = (async () => {
+      for (let t = 0; t < 10; t++) {
+        ctx.fx.sound.tick(0.4 + t * 0.06);
+        await sleep(330);
+      }
+    })();
+    const frames = [];
+    const steps = 26;
+    for (let i = 0; i <= steps; i++) {
+      const p = i / steps;
+      const amp = 2 + 16 * p;
+      const tilt = Math.sin(p * Math.PI * 12) * amp;
+      frames.push({
+        transform: `translateX(${tilt}px) rotate(${tilt * 0.35}deg)`,
+        offset: p,
+        easing: "ease-in-out",
+      });
+    }
+    await Promise.all([
+      box.animate(frames, { duration: SHAKE_MS }).finished.catch(() => {}),
+      tickLoop,
+    ]);
+  }
+
+  /* 末段剧烈抖动：开盖前最后一记"憋不住了" */
+  async function rattle(box) {
+    const frames = [];
+    const steps = 12;
+    for (let i = 0; i <= steps; i++) {
+      const p = i / steps;
+      const tilt = Math.sin(p * Math.PI * 18) * 18 * (1 - p * 0.3);
+      frames.push({
+        transform: `translateX(${tilt}px) rotate(${tilt * 0.5}deg)`,
+        offset: p,
+        easing: "ease-in-out",
+      });
+    }
+    await box.animate(frames, { duration: RATTLE_MS }).finished.catch(() => {});
   }
 
   /* 开盖三连：填奖品 → 盖子顶飞翻滚落地 → 彩带迸在盒心 */
@@ -175,7 +234,6 @@ export function mount(stage, ctx) {
     box.classList.add("is-open");
     ctx.fx.sound.pop();
     if (!ctx.reduced) {
-      // 盖子被顶飞：抛起翻滚，落在盒旁不再凭空消失（fill:forwards 定格）
       const lid = box.querySelector(".box-lid");
       lid.animate(
         [
@@ -191,56 +249,86 @@ export function mount(stage, ctx) {
     }
   }
 
-  async function open(index) {
-    if (running || dead) return;
+  /* 第一步：开始打乱（不产生结果、不起播音乐——打乱只是选盒游戏） */
+  async function startShuffle() {
+    if (phase !== "attract" || dead) return;
+    const boxes = [...grid.children];
+    // 奖品清单未就绪时 mount 可能只渲染出"谢谢参与"1 盒（首屏 mount 先于 loadPrizes、
+    // 或弱网加载失败）——此时换位循环会在"随机找另一只"上死循环，拒绝开始
+    if (boxes.length < 2) {
+      ctx.fx.toast("奖品清单还没加载好，稍等一下再点开始");
+      return;
+    }
+    phase = "shuffle";
     ctx.fx.sound.click();
-    // 真实抽奖（扣库存、起播音乐）与旁位采样（无副作用）并行——动画时钟从此刻起跑
+    startBtn.disabled = true;
+    startBtn.textContent = "打乱中…";
+    boxes.forEach((b) => {
+      b.disabled = true;
+      b.classList.remove("is-floating"); // 停 idle 浮动，避免与换位 transform 互相覆盖
+    });
+    grid.classList.add("is-shuffling");
+    // 点开始的一瞬全部翻面成"?"：打乱全程不显示内容（盲选到底）
+    boxes.forEach((b) => b.classList.add("is-q"));
+    if (ctx.reduced) {
+      await sleep(REDUCED_SHUFFLE_MS);
+    } else {
+      await sleep(FLIP_MS);
+      await shuffle(boxes);
+    }
+    if (dead) return; // 打乱中切了玩法：别在已销毁的实例上继续收尾发声
+    grid.classList.remove("is-shuffling");
+    ctx.fx.sound.pop(); // 打乱收拍
+    phase = "pick";
+    startBtn.textContent = "凭记忆选一只盒子";
+    boxes.forEach((b) => {
+      b.disabled = false;
+      b.classList.add("is-invite"); // 呼吸脉动邀请选盒
+    });
+  }
+
+  /* 第二步：选盒（此刻才真实抽奖 + 起播音乐），悬念走满 RESULT_AT 开盒 */
+  async function pick(index) {
+    if (phase !== "pick" || dead) return;
+    phase = "reveal";
+    ctx.fx.sound.click();
     const [result, sampled] = await Promise.all([
       ctx.draw(),
       api.sample(7).catch(() => ({ samples: [] })),
     ]);
-    if (!result || dead) return;
-    running = true;
+    if (!result || dead) {
+      phase = "pick";
+      return;
+    }
     const t0 = performance.now(); // = 音乐起播点，各阶段终点用 phaseEnd 兜底对齐
     const phaseEnd = (ms) => sleep(Math.max(0, ms - (performance.now() - t0)));
 
     const boxes = [...grid.children];
     boxes.forEach((b) => {
       b.disabled = true;
-      b.classList.remove("is-floating"); // 停 idle 浮动，避免与换位/摇晃的 transform 互相覆盖
+      b.classList.remove("is-invite");
     });
     const box = boxes[index];
     const others = boxes.filter((_, i) => i !== index);
-
-    // ① 全部标签翻面成"?"：迅速藏起"你刚才盯住的奖品"与盒子的对应关系
-    boxes.forEach((b) => b.classList.add("is-q"));
+    box.classList.add("is-picked");
 
     if (ctx.reduced) {
-      // 减动效：跳过换位与摇晃，短暂停顿直接开盒
       await sleep(REDUCED_OPEN_MS);
       pop(box, result);
       await sleep(150);
     } else {
-      // ② 选中盒上浮 + 金色描边锁定，其余 7 只疯狂换位（选中盒原地不动）
-      box.classList.add("is-picked");
-      grid.classList.add("is-shuffling");
-      await phaseEnd(FLIP_MS);
-      if (others.length >= 2) await shuffle(others);
-      grid.classList.remove("is-shuffling");
-      await phaseEnd(FLIP_MS + SHUFFLE_MS);
-      // ③ 选中盒剧烈摇晃蓄力
-      await shake(box);
+      await phaseEnd(LIFT_MS);
+      await shakeRamp(box);
+      await rattle(box);
       await phaseEnd(POP_AT);
-      // ④ 开盖：盖子顶飞 + 彩带 + 奖品 spring 弹出
       pop(box, result);
-      // ⑤ 卡准 RESULT_AT：歌里的"停"喊出的一瞬弹窗（各阶段常量拼出，此处兜底对齐）
       await phaseEnd(RESULT_AT * 1000);
     }
 
     const choice = await ctx.reveal(result);
     if (dead) return;
 
-    // ⑥ 弹窗关闭后揭底：其余 7 盒按真实采样翻开，展示"如果选它们"的分布
+    // 弹窗关闭后揭底：其余 7 盒按真实采样翻开，展示"如果选它们"的分布
     const faces = buildFaces(sampled, others.length);
     others.forEach((b, k) => {
       timers.push(setTimeout(() => {
@@ -254,17 +342,17 @@ export function mount(stage, ctx) {
     if (dead) return;
 
     ctx.refresh();
-    running = false;
-    render();
+    render(); // 回到待选态
     if (choice === "again") {
-      // 再抽一次：重建后重开同一只盒子（模仿 flip.js 的 index % 8 做法）
-      timers.push(setTimeout(() => grid.children[index % (grid.children.length || 1)]?.click(), 200));
+      // 与其他玩法一致：弹窗点"再抽一次"自动开新一轮打乱
+      timers.push(setTimeout(() => startShuffle(), 200));
     }
   }
 
-  const onPrizes = () => { if (!running && !dead) render(); };
+  startBtn.addEventListener("click", startShuffle);
+  const onPrizes = () => { if (phase === "attract" && !dead) render(); };
   window.addEventListener("lucky:prizes", onPrizes);
-  const ro = new ResizeObserver(() => { if (!running && !dead) layout(); });
+  const ro = new ResizeObserver(() => { if (phase === "attract" && !dead) layout(); });
   ro.observe(grid);
   render();
 

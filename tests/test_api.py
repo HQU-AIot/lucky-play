@@ -150,7 +150,7 @@ def test_stock_remaining_cannot_exceed_total():
 
 
 def test_sample_interface_no_side_effect():
-    """翻牌旁位采样：返回 count 条、结构正确、不扣库存。"""
+    """盲盒旁位采样：返回 count 条、结构正确、不扣库存。"""
     before = {p["id"]: p["remaining"] for p in client.get("/api/prizes").json()["prizes"]}
     r = client.get("/api/sample?count=7")
     assert r.status_code == 200

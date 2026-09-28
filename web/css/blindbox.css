@@ -82,6 +82,20 @@
 /* 换位进行中：屏蔽指针干扰（盒子此时也已 disabled，双保险） */
 .bb-grid.is-shuffling .box { pointer-events: none; }
 
+/* 开始打乱按钮：打乱前的唯一入口 */
+.bb-start { margin-top: 20px; min-width: 230px; font-size: 18px; padding: 12px 36px; letter-spacing: .12em; }
+.bb-start:disabled { opacity: .55; cursor: wait; }
+
+/* 打乱停下后的邀请态：轻微呼吸放大，提示"该选了"（选中时 JS 摘掉） */
+.bb-box.is-invite {
+  animation: bb-invite 1.5s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * -.19s);
+}
+@keyframes bb-invite {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+
 @media (max-width: 640px) {
   .bb-wrap { gap: 12px; }
 }

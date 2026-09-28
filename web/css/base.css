@@ -270,13 +270,15 @@ button { font-family: inherit; }
   position: absolute; left: 50%; top: 50%;
   transform: translate(-50%, -50%);
   z-index: 4;
-  width: 140px; height: 140px;   /* 124→140，随转盘加大 */
+  /* 随盘缩放（18% ≈ 满尺寸 140px）：小视口 77vh 压盘时中心钮跟着缩，
+     名字带内端才不会探进钮下（r_names ≈ 0.1135×size 恒小于 0.09×size 不成立时以缩放兜住） */
+  width: 18%; height: 18%;
   border-radius: 50%;
   border: 4px solid var(--hub-ring, rgba(255,255,255,.75));
   background: var(--btn-bg);
   color: var(--btn-ink);
   font-family: var(--font-display);
-  font-size: 29px; font-weight: 900; letter-spacing: .12em; text-indent: .12em;
+  font-size: clamp(20px, 3.7vw, 29px); font-weight: 900; letter-spacing: .12em; text-indent: .12em;
   cursor: pointer;
   box-shadow: 0 8px 26px rgba(0,0,0,.35), inset 0 -4px 10px rgba(0,0,0,.2);
   transition: transform .15s ease, filter .2s ease;
@@ -286,20 +288,22 @@ button { font-family: inherit; }
 .wheel-hub:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
 /* 盘侧竖排提示语：立在游戏左侧的留白里，古典竖排 + 主题色细分隔线。
    锚定 .stage（相对定位）而非各玩法容器；窄屏退回横排（见底部媒体查询）。 */
-.stage-hint, .flip-cta {
+.stage-hint {
   position: absolute;
   left: clamp(20px, 4vw, 60px);
   top: 50%;
   transform: translateY(-50%);
   margin: 0;
   writing-mode: vertical-rl;
-  font-size: 18px;
+  /* top:50% 会把竖排可用高度压成舞台下半段导致折列；显式按内容取高再平移居中 */
+  height: max-content;
+  font-size: 22px;
   font-weight: 600;
-  letter-spacing: .42em;
+  letter-spacing: .28em;
   color: var(--ink);
   opacity: .92;
   pointer-events: none;
-  padding-right: 16px;
+  padding-right: 18px;
   border-right: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
@@ -419,51 +423,6 @@ button { font-family: inherit; }
 .box.is-open .box-q { opacity: 0; transform: scale(.4); }
 .box.is-open .box-prize { animation: prize-pop .7s cubic-bezier(.34,1.56,.64,1) .15s both; }
 .box:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; border-radius: 14px; }
-
-/* ---------- 形式四：翻牌 ---------- */
-
-.card-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(12px, 2.5vw, 18px); width: min(660px, 92vw); }
-.f-card {
-  display: block;
-  perspective: 1100px;
-  aspect-ratio: 3 / 4;
-  cursor: pointer;
-  border: none; background: none; padding: 0;
-  transition: transform .25s ease, opacity .3s ease, filter .3s ease;
-}
-.f-card:hover:not(:disabled) { transform: translateY(-5px); }
-.f-card:disabled { cursor: default; }
-.f-card.is-dim { opacity: .35; filter: grayscale(.6); transform: scale(.96); }
-.f-inner {
-  display: block;
-  position: relative; width: 100%; height: 100%;
-  transform-style: preserve-3d;
-  transition: transform .7s cubic-bezier(.4,0,.2,1);
-}
-.f-card.is-flipped .f-inner { transform: rotateY(180deg); }
-.f-face {
-  position: absolute; inset: 0;
-  backface-visibility: hidden;
-  border-radius: var(--radius);
-  display: grid; place-items: center; gap: 4px;
-  border: 1px solid var(--line-strong);
-}
-.f-back {
-  background-color: var(--card-back-bg, var(--accent));
-  background-image: var(--card-back-pattern, none);
-  background-size: var(--card-back-size, auto);
-  box-shadow: var(--card-shadow);
-}
-.f-back .f-mark { font-size: 40px; color: var(--card-back-ink, #fff); font-family: var(--font-display); font-weight: 900; text-shadow: 0 3px 8px rgba(0,0,0,.3); }
-.f-front {
-  transform: rotateY(180deg);
-  background: var(--surface);
-  box-shadow: var(--card-shadow);
-}
-.f-front .f-emoji { font-size: clamp(34px, 7vw, 48px); }
-.f-front .f-name { font-size: clamp(11px, 1.8vw, 13px); font-weight: 700; text-align: center; padding: 0 6px; line-height: 1.3; }
-.f-card.is-result .f-front { border: 2px solid var(--accent); box-shadow: 0 0 24px color-mix(in srgb, var(--accent) 60%, transparent); animation: winner-pulse 1s ease 2; }
-.f-card:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: var(--radius); }
 
 /* ---------- 形式五：老虎机 ---------- */
 
@@ -600,187 +559,6 @@ button { font-family: inherit; }
 /* 大奖落点格：三钻连线微光（图案由 slot.js 替换为 💎，奖品名保留） */
 .slot-cell .sc-emoji.sc-jackpot-gem { filter: drop-shadow(0 0 14px rgba(255,197,66,.95)); }
 
-/* ---------- 形式六：扭蛋机 ---------- */
-
-.gacha-box { display: grid; justify-items: center; gap: 10px; }
-.gacha-machine {
-  width: min(480px, 92vw);
-  border-radius: 30px 30px 22px 22px;
-  background:
-    linear-gradient(180deg,
-      color-mix(in srgb, var(--accent) 55%, #ffffff) 0%,
-      var(--accent) 34%,
-      color-mix(in srgb, var(--accent) 74%, #000000) 100%);
-  box-shadow:
-    inset 0 2px 0 rgba(255,255,255,.45),
-    inset -10px 0 22px rgba(0,0,0,.18),
-    var(--card-shadow);
-  padding: 18px 26px 16px;
-  display: grid; gap: 12px; justify-items: center;
-  position: relative;
-}
-.gacha-top { position: absolute; top: 14px; right: 22px; display: flex; gap: 8px; }
-.gacha-top span {
-  width: 12px; height: 12px; border-radius: 50%;
-  background: var(--gold, #FFD166);
-  box-shadow: inset -2px -3px 4px rgba(0,0,0,.3), 0 0 8px rgba(255, 220, 100, .55);
-}
-.gacha-machine.is-cranking .gacha-top span { animation: bulb-blink .35s ease infinite; }
-@keyframes bulb-blink {
-  0%, 100% { filter: brightness(1); }
-  50% { filter: brightness(1.9); }
-}
-.gacha-dome {
-  width: 100%;
-  height: clamp(280px, 40vw, 330px);
-  border-radius: 46% 46% 20px 20px / 34% 34% 20px 20px;
-  background:
-    linear-gradient(155deg, rgba(255,255,255,.4), rgba(255,255,255,.06) 52%, rgba(255,255,255,.16) 88%),
-    rgba(15, 20, 34, .22);
-  border: 2px solid rgba(255,255,255,.55);
-  box-shadow: inset 0 -14px 26px rgba(0,0,0,.22), inset 0 10px 18px rgba(255,255,255,.28);
-  position: relative;
-  overflow: hidden;
-}
-.gacha-machine.is-cranking .gacha-dome { animation: dome-shake .5s ease; }
-@keyframes dome-shake {
-  0%, 100% { transform: translate(0, 0); }
-  25% { transform: translate(-5px, 2px) rotate(-1deg); }
-  55% { transform: translate(5px, -2px) rotate(1deg); }
-  80% { transform: translate(-2px, 1px); }
-}
-.dome-shine {
-  position: absolute; inset: 0;
-  background: linear-gradient(115deg, transparent 34%, rgba(255,255,255,.34) 46%, rgba(255,255,255,.06) 58%, transparent 66%);
-  pointer-events: none;
-  z-index: 3;
-}
-.g-ball {
-  position: absolute;
-  border-radius: 50%;
-  box-shadow: inset -7px -10px 14px rgba(0,0,0,.28), inset 5px 6px 10px rgba(255,255,255,.55), 0 5px 9px rgba(0,0,0,.22);
-  z-index: 2;
-}
-.gacha-brand {
-  font-family: var(--font-display);
-  font-weight: 900;
-  font-size: 15px;
-  letter-spacing: .3em; text-indent: .3em;
-  color: var(--gold, #FFD166);
-  background: rgba(0, 0, 0, .34);
-  border-radius: 999px;
-  padding: 6px 22px;
-  text-shadow: 0 1px 3px rgba(0,0,0,.4);
-}
-.gacha-panel {
-  width: 100%;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 20px;
-  background: rgba(0, 0, 0, .18);
-  border-radius: 18px;
-  padding: 16px 20px;
-}
-.gacha-coin {
-  width: 16px; height: 72px;
-  border-radius: 8px;
-  background: linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.3));
-  box-shadow: inset 0 2px 6px rgba(0,0,0,.6), 0 1px 0 rgba(255,255,255,.25);
-}
-.gacha-chute {
-  height: 96px;
-  border-radius: 14px;
-  background: radial-gradient(ellipse at 50% 62%, rgba(0,0,0,.66), rgba(0,0,0,.32) 74%);
-  border: 2px solid rgba(255,255,255,.4);
-  box-shadow: inset 0 8px 18px rgba(0,0,0,.5);
-  position: relative;
-}
-.gacha-chute::after {
-  content: "";
-  position: absolute; left: 50%; bottom: -13px;
-  transform: translateX(-50%);
-  border: 11px solid transparent;
-  border-top-color: rgba(0,0,0,.4);
-}
-.gacha-knob {
-  appearance: none; cursor: pointer;
-  width: 96px; height: 96px;
-  border-radius: 50%;
-  border: 4px solid rgba(255,255,255,.65);
-  background: radial-gradient(circle at 32% 28%, var(--accent-2, #fff), var(--accent) 72%);
-  box-shadow: inset -6px -10px 16px rgba(0,0,0,.32), inset 5px 7px 12px rgba(255,255,255,.4), 0 8px 18px rgba(0,0,0,.35);
-  position: relative;
-  transition: filter .2s ease, transform .15s ease;
-}
-.gacha-knob span {
-  position: absolute; left: 50%; top: 12px;
-  width: 8px; height: 26px;
-  transform: translateX(-50%);
-  border-radius: 4px;
-  background: rgba(255,255,255,.85);
-  box-shadow: 0 1px 3px rgba(0,0,0,.3);
-}
-.gacha-knob:hover:not(:disabled) { filter: brightness(1.1); transform: scale(1.04); }
-.gacha-knob:active:not(:disabled) { transform: scale(.97); }
-.gacha-knob:disabled { cursor: wait; filter: saturate(.5) brightness(.85); }
-.gacha-knob:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
-.gacha-feet {
-  position: absolute; left: 8%; right: 8%; bottom: -14px;
-  height: 16px;
-  display: flex; justify-content: space-between;
-  pointer-events: none;
-}
-.gacha-feet span {
-  width: 64px; height: 16px;
-  border-radius: 0 0 10px 10px;
-  background: color-mix(in srgb, var(--accent) 55%, #000);
-}
-.gacha-egg-stage { min-height: 226px; display: grid; place-items: end center; padding-bottom: 8px; }
-.gacha-egg { position: relative; width: 150px; height: 178px; }
-.gacha-egg .egg-half {
-  position: absolute; inset: 0;
-  border-radius: 50% 50% 46% 46% / 58% 58% 42% 42%;
-  background: radial-gradient(circle at 32% 26%, var(--gold, var(--accent)), var(--accent) 68%);
-  box-shadow: inset -9px -14px 22px rgba(0,0,0,.26), inset 7px 10px 14px rgba(255,255,255,.45), 0 16px 30px rgba(0,0,0,.3);
-}
-.gacha-egg .egg-half.is-top { clip-path: polygon(0 0, 100% 0, 100% 46%, 0 46%); }
-.gacha-egg .egg-half.is-bottom { clip-path: polygon(0 46%, 100% 46%, 100% 100%, 0 100%); border-top: 3px dashed rgba(255,255,255,.35); }
-.gacha-egg .egg-prize {
-  position: absolute; left: 50%; top: 40%;
-  transform: translateX(-50%) scale(0);
-  display: grid; justify-items: center; gap: 5px;
-  z-index: 2;
-  pointer-events: none;
-}
-.gacha-egg .egg-prize .p-emoji { font-size: 66px; filter: drop-shadow(0 10px 16px rgba(0,0,0,.35)); }
-.gacha-egg .egg-prize .p-name {
-  white-space: nowrap;
-  font-size: 14px; font-weight: 800;
-  background: var(--surface); color: var(--ink);
-  border: 1px solid var(--line-strong);
-  padding: 4px 14px; border-radius: 999px;
-}
-.gacha-egg.is-open .egg-half.is-top { animation: egg-top-fly .6s cubic-bezier(.34,1.2,.5,1) both; }
-.gacha-egg.is-open .egg-half.is-bottom { animation: egg-drop-fade .5s ease .15s both; }
-.gacha-egg.is-open .egg-prize { animation: prize-pop .7s cubic-bezier(.34,1.56,.64,1) .15s both; }
-@keyframes egg-top-fly {
-  from { transform: translateY(0) rotate(0); opacity: 1; }
-  to { transform: translateY(-88px) rotate(-32deg); opacity: 0; }
-}
-@keyframes egg-drop-fade {
-  from { opacity: 1; }
-  to { transform: translateY(16px); opacity: .35; }
-}
-.gacha-egg.is-quiver { animation: egg-quiver .5s ease; }
-@keyframes egg-quiver {
-  0%, 100% { transform: rotate(0); }
-  25% { transform: rotate(-7deg); }
-  60% { transform: rotate(6deg); }
-  85% { transform: rotate(-3deg); }
-}
-
-
 /* ---------- 彩带画布 ---------- */
 
 .confetti-canvas { position: fixed; inset: 0; z-index: 90; pointer-events: none; width: 100%; height: 100%; }
@@ -815,7 +593,7 @@ button { font-family: inherit; }
 
 /* 窄屏侧边放不下竖排：退回常规横排、回到游戏下方 */
 @media (max-width: 1150px) {
-  .stage-hint, .flip-cta {
+  .stage-hint {
     position: static;
     writing-mode: horizontal-tb;
     transform: none;
@@ -834,8 +612,8 @@ button { font-family: inherit; }
   .stage { min-height: 460px; padding: 22px 12px; }
   .wheel-hub { width: 88px; height: 88px; font-size: 20px; }
   .topbar { padding-top: 14px; }
-  .stage-hint, .flip-cta { margin-top: 14px; }
-  .wheel-box, .grid9-box, .flip-box { display: flex; flex-direction: column; align-items: center; }
+  .stage-hint { margin-top: 14px; }
+  .wheel-box, .grid9-box { display: flex; flex-direction: column; align-items: center; }
 }
 
 /* ---------- 降低动态效果 ---------- */
