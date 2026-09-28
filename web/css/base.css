@@ -11,7 +11,11 @@ body {
   background: var(--bg);
   background-image: var(--bg-grad, none);
   background-attachment: fixed;
+  /* 整页恰好一屏：顶栏 + 弹性舞台铺满视口，消除上下大块留白（不滚动） */
   min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
   overflow-x: hidden;
   transition: background-color .5s ease, color .5s ease;
 }
@@ -29,7 +33,7 @@ button { font-family: inherit; }
 .topbar {
   position: relative; z-index: 2;
   display: flex; align-items: center; justify-content: center;
-  padding: 22px clamp(16px, 4vw, 44px) 8px;
+  padding: 12px clamp(16px, 4vw, 44px) 6px;
 }
 
 /* 标题页面居中；工具栏钉在右侧，不占居中位 */
@@ -77,17 +81,22 @@ button { font-family: inherit; }
   position: relative; z-index: 1;
   max-width: 1120px;
   margin: 0 auto;
-  padding: 14px clamp(16px, 4vw, 44px) 48px;
+  /* flex:1 吃掉顶栏以下的全部视口高度，舞台随之铺满（body 为纵向 flex） */
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 4px clamp(16px, 4vw, 44px) 16px;
   width: 100%;
 }
 
 /* 舞台去卡片框：背景/边框/阴影全部拿掉，游戏直接浮在页面氛围层上。
    --stage-bg 变量仍定义在 themes.css（暂无消费者，留作回退不删）。
-   保留内边距避免游戏贴边；overflow:hidden 继续兜住溢出装饰。 */
+   flex:1 铺满布局区；overflow:hidden 继续兜住溢出装饰。 */
 .stage {
-  min-height: 700px;
+  flex: 1;
+  min-height: 0;
   display: grid; place-items: center;
-  padding: 34px 24px;
+  padding: 12px 24px;
   position: relative;
   overflow: hidden;
 }
@@ -225,9 +234,8 @@ button { font-family: inherit; }
 
 .wheel-wrap {
   position: relative;
-  /* 加大一档：px 上限 680→780；vh 因子 76→77（1366×768 投影下 77vh≈591px，
-     恰贴 stage 700px 高预算上限 592px[=700-上下 padding 68-提示语 40]，
-     再大会把 stage-hint 挤出可视区） */
+  /* px 上限 680→780；vh 因子 76→77（与顶栏/布局的弹性一屏预算配套，
+     舞台高度 = 视口 - 顶栏，77vh 上限保证盘体+竖排提示不溢出） */
   width: min(780px, 94vw, 77vh);
   aspect-ratio: 1;
   margin: 0 auto;
@@ -309,13 +317,13 @@ button { font-family: inherit; }
 
 /* ---------- 形式二：九宫格 ---------- */
 
+.grid9-box { display: grid; justify-items: center; gap: 16px; }
 .grid9 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 14px;
-  /* 加大一档，与转盘同口径：560/92vw/66vh → 640/94vw/74vh
-     （768 高投影下 74vh≈568px，格高 180px，stage 内含提示语仍完整） */
-  width: min(640px, 94vw, 74vh);
+  /* 3×3 全 9 格 + 下方开始按钮：64vh 上限保证网格+按钮在舞台内完整可见 */
+  width: min(600px, 92vw, 64vh);
   aspect-ratio: 1;
 }
 .g-cell {
@@ -328,6 +336,8 @@ button { font-family: inherit; }
   transition: box-shadow .3s ease, background-color .14s ease, border-color .14s ease,
     transform .16s cubic-bezier(.34, 1.56, .64, 1);
 }
+/* 奖品数 <9 时 JS 用 hidden 属性隐藏多余格——作者样式会压掉 UA 的 [hidden] 规则，须显式声明 */
+.g-cell[hidden] { display: none; }
 .g-cell .g-emoji { font-size: clamp(24px, 5.5vw, 34px); }
 .g-cell .g-name { font-size: clamp(11px, 1.6vw, 13px); font-weight: 600; line-height: 1.25; }
 .g-cell.is-lit {
@@ -343,20 +353,9 @@ button { font-family: inherit; }
 .g-cell.is-lit .g-name { color: var(--btn-ink); }
 .g-cell.is-lit .g-emoji { animation: cell-bounce .5s ease; }
 .g-cell.is-winner { animation: winner-pulse 1s ease 2; border-color: var(--accent); }
-.g-hub {
-  appearance: none; cursor: pointer;
-  border: none; border-radius: var(--radius);
-  background: var(--btn-bg); color: var(--btn-ink);
-  font-family: var(--font-display);
-  font-size: clamp(20px, 3vw, 26px); font-weight: 900; letter-spacing: .14em; text-indent: .14em;
-  box-shadow: var(--btn-shadow);
-  transition: transform .15s ease, filter .2s ease;
-}
-.g-hub:hover:not(:disabled) { transform: scale(1.04); filter: brightness(1.07); }
-.g-hub:disabled { cursor: wait; filter: saturate(.6); }
-.g-hub:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.g-start { margin-top: 2px; font-size: clamp(20px, 3vw, 26px); font-weight: 900; letter-spacing: .14em; text-indent: .14em; padding: 12px 44px; }
 
-/* ---------- 形式三：盲盒（造型规则供 blindbox.css 的 8 盒网格复用） ---------- */
+/* ---------- 形式三：盲盒（造型规则供 blindbox.css 的 9 盒网格复用） ---------- */
 
 .box {
   position: relative;
@@ -609,7 +608,7 @@ button { font-family: inherit; }
 /* ---------- 响应式 ---------- */
 
 @media (max-width: 640px) {
-  .stage { min-height: 460px; padding: 22px 12px; }
+  .stage { padding: 12px 12px; }
   .wheel-hub { width: 88px; height: 88px; font-size: 20px; }
   .topbar { padding-top: 14px; }
   .stage-hint { margin-top: 14px; }

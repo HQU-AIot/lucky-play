@@ -31,11 +31,10 @@ const REDUCED_SHUFFLE_MS = 300; // 减动效：象征性换位停顿
 const REDUCED_OPEN_MS = 400;    // 减动效：选中后短暂停顿即开盒
 const REVEAL_STEP_MS = 90;      // 弹窗关闭后揭底的错峰间隔
 
-/* 布局：4×2 网格（窄屏 2 列），盒子绝对定位、left/top 由 JS 按格位计算——
+/* 布局：3×3 网格（窄屏 2 列），盒子绝对定位、left/top 由 JS 按格位计算——
    换位 = 改坐标 + WAAPI 补间，比 FLIP 记录还原更简单可靠 */
 const GRID_GAP = 16;
 const BOX_RATIO = 0.88;
-const NARROW_PX = 560;
 
 export function mount(stage, ctx) {
   stage.innerHTML = `
@@ -53,7 +52,7 @@ export function mount(stage, ctx) {
 
   function render() {
     const all = ctx.items();
-    const items = all.slice(0, 8);
+    const items = all.slice(0, 9);
     phase = "attract";
     grid.innerHTML = "";
     items.forEach((item, i) => {
@@ -73,19 +72,21 @@ export function mount(stage, ctx) {
     });
     startBtn.disabled = false;
     startBtn.textContent = "开始打乱";
-    // 奖品超过 7+谢谢参与时盒面放不下：明示"看得到的只有前 8 项，但抽奖池是全量"
-    if (all.length > 8) {
+    // 奖品超过 8+谢谢参与时盒面放不下：明示"看得到的只有前 9 项，但抽奖池是全量"
+    if (all.length > 9) {
       stage.querySelector(".stage-hint").textContent =
-        `奖品共 ${all.length} 项，盒面仅展示前 8 项——其余项仍可能被抽中`;
+        `奖品共 ${all.length} 项，盒面仅展示前 9 项——其余项仍可能被抽中`;
     }
     layout();
   }
 
-  /* 计算格位几何并落位：容器高度由 JS 依据列数设定 */
+  /* 计算格位几何并落位：容器高度由 JS 依据列数设定。
+     列数恒为 3（3×3 九盒）：窄屏若改 2 列会变成 5 行，溢出锁定一屏的舞台
+     （overflow:hidden 且 body 不可滚），手机上"开始打乱"按钮将不可达 */
   function layout() {
     const n = grid.children.length;
     if (!n) return;
-    const cols = window.innerWidth < NARROW_PX ? 2 : 4;
+    const cols = 3;
     const bw = (grid.clientWidth - (cols - 1) * GRID_GAP) / cols;
     const bh = bw * BOX_RATIO;
     const rows = Math.ceil(n / cols);
@@ -294,7 +295,7 @@ export function mount(stage, ctx) {
     ctx.fx.sound.click();
     const [result, sampled] = await Promise.all([
       ctx.draw(),
-      api.sample(7).catch(() => ({ samples: [] })),
+      api.sample(8).catch(() => ({ samples: [] })), // 9 盒选 1，其余 8 盒的揭底分布
     ]);
     if (!result || dead) {
       phase = "pick";

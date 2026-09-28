@@ -303,8 +303,7 @@
 [data-theme="pixel"] .reveal-emoji { filter: drop-shadow(4px 4px 0 rgba(0,0,0,.4)); }
 
 /* macaron：果冻按钮 */
-[data-theme="macaron"] .btn-primary:active,
-[data-theme="macaron"] .g-hub:active { animation: jelly .5s ease; }
+[data-theme="macaron"] .btn-primary:active { animation: jelly .5s ease; }
 @keyframes jelly {
   0% { transform: scale(1, 1); }
   30% { transform: scale(1.12, .86); }

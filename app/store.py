@@ -14,10 +14,11 @@ from pathlib import Path
 from .lottery import DYNAMIC_PER_WIN, PrizeSpec
 
 DEFAULT_PRIZES = [
-    # id, 名称, emoji, 基础权重, 总库存（来自 docs/spec/奖品清单.jpg）
+    # id, 名称, emoji, 基础权重, 总库存（来自 docs/spec/奖品清单.jpg + NFC 纪念卡）
     ("lollipop", "不二家棒棒糖", "🍭", 30, 53),
     ("nailong", "奶龙手办", "🐲", 20, 36),
     ("notebook", "口袋笔记本", "📓", 15, 18),
+    ("nfccard", "NFC纪念卡", "🪪", 12, 10),
     ("bookmark", "油画书签", "🎨", 10, 8),
     ("shark", "鲨鱼匕首", "🦈", 8, 6),
     ("crawlpet", "电子爬宠", "🦎", 6, 4),
@@ -79,13 +80,23 @@ class Store:
                     )""",
                 ):
                     self._conn.execute(stmt)
-                if not self._conn.execute("SELECT 1 FROM prizes LIMIT 1").fetchone():
-                    for i, (pid, name, emoji, weight, stock) in enumerate(DEFAULT_PRIZES):
-                        self._conn.execute(
-                            "INSERT INTO prizes (id, name, emoji, sort, base_weight,"
-                            " total_stock, remaining) VALUES (?,?,?,?,?,?,?)",
-                            (pid, name, emoji, i, weight, stock, stock),
-                        )
+                # 播种 + 幂等迁移：空库按清单顺序全量播种；已有库只补默认清单里
+                # 新增的奖品，sort 追加到末尾顺延（不与已有项撞号，展示顺序稳定）。
+                # 已有奖品的权重/库存一概不动——现场调过的参数保持原样。
+                existing = {r["id"] for r in self._conn.execute("SELECT id FROM prizes")}
+                next_sort = self._conn.execute(
+                    "SELECT COALESCE(MAX(sort) + 1, 0) FROM prizes"
+                ).fetchone()[0]
+                for i, (pid, name, emoji, weight, stock) in enumerate(DEFAULT_PRIZES):
+                    if pid in existing:
+                        continue
+                    sort = i if not existing else next_sort
+                    next_sort += 1
+                    self._conn.execute(
+                        "INSERT INTO prizes (id, name, emoji, sort, base_weight,"
+                        " total_stock, remaining) VALUES (?,?,?,?,?,?,?)",
+                        (pid, name, emoji, sort, weight, stock, stock),
+                    )
                 for key, value in DEFAULT_CONFIG.items():
                     self._conn.execute(
                         "INSERT OR IGNORE INTO config (key, value) VALUES (?,?)", (key, value)

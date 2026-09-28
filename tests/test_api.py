@@ -17,10 +17,10 @@ def test_public_prizes_interface():
     assert r.status_code == 200
     data = r.json()
     assert data["event"]
-    assert len(data["prizes"]) == 7
+    assert len(data["prizes"]) == 8
     totals = {p["id"]: p["total"] for p in data["prizes"]}
     assert totals == {
-        "lollipop": 53, "nailong": 36, "notebook": 18, "bookmark": 8,
+        "lollipop": 53, "nailong": 36, "notebook": 18, "nfccard": 10, "bookmark": 8,
         "shark": 6, "crawlpet": 4, "gamesir": 1,
     }
     assert data["total_remaining"] == sum(totals.values())
@@ -71,7 +71,7 @@ def test_admin_weights_and_probability():
     # 动态转移关闭后，概率应精确等于权重比
     client.put("/api/admin/dynamic", json={"enabled": False, "mode": "per_win"}, headers=TOKEN)
     state = client.get("/api/admin/state", headers=TOKEN).json()
-    total_w = 50 + 20 + 15 + 10 + 8 + 6 + 2 + 25
+    total_w = 50 + 20 + 15 + 12 + 10 + 8 + 6 + 2 + 25
     lollipop = next(p for p in state["prizes"] if p["id"] == "lollipop")
     assert abs(lollipop["probability"] - 50 / total_w) < 1e-3
     client.put("/api/admin/dynamic", json={"enabled": True, "mode": "per_win"}, headers=TOKEN)
@@ -183,7 +183,8 @@ def test_history_and_reset():
 
 def test_concurrent_no_oversell():
     """并发压力：唯一大奖库存 1，把它的权重拉满后 50 人同时抢，绝不能发出 2 件。"""
-    zero = {pid: 0 for pid in ["lollipop", "nailong", "notebook", "bookmark", "shark", "crawlpet"]}
+    all_ids = [p["id"] for p in client.get("/api/prizes").json()["prizes"]]
+    zero = {pid: 0 for pid in all_ids if pid != GAMESIR}
     r = client.put(
         "/api/admin/weights", json={"weights": {**zero, GAMESIR: 100}, "thanks_weight": 0},
         headers=TOKEN,
