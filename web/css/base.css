@@ -327,6 +327,11 @@ button { font-family: inherit; }
   /* 268px = 左右各留 66px 竖排提示带（提示宽 ~52 + 间距 14）+ 舞台内边距；
      ≤1150px 提示转横排随流，无此约束回到 94vw */
   width: min(1160px, 94vw, calc(100vw - 268px));
+  /* 网格布局：标题/滚轮/开抽共用第 1 列轴线（视觉主轴，真正居中对齐），
+     拉杆独占第 2 列挂在右侧，不再把滚轮挤得偏离面板中心 */
+  display: grid;
+  grid-template-columns: 1fr auto;
+  column-gap: clamp(14px, 2.5vw, 26px);
   border-radius: var(--radius-lg);
   background: var(--surface);
   border: 1px solid var(--line-strong);
@@ -335,6 +340,8 @@ button { font-family: inherit; }
   text-align: center;
 }
 .slot-marquee {
+  grid-area: 1 / 1;
+  justify-self: center;
   display: inline-block;
   font-family: var(--font-display);
   font-weight: 900;
@@ -353,9 +360,9 @@ button { font-family: inherit; }
   50% { filter: brightness(1.55) saturate(1.4); box-shadow: 0 0 30px var(--accent); }
 }
 .slot-main {
+  grid-area: 2 / 1;
   display: flex;
   align-items: center;
-  gap: clamp(14px, 2.5vw, 26px);
 }
 .slot-windows {
   flex: 1;
@@ -393,6 +400,8 @@ button { font-family: inherit; }
   z-index: 2;
 }
 .slot-btn {
+  grid-area: 3 / 1;
+  justify-self: center;
   margin-top: 24px;
   font-size: clamp(22px, 3vw, 30px);
   font-weight: 900;
@@ -403,7 +412,8 @@ button { font-family: inherit; }
 
 /* 拉杆 */
 .slot-lever {
-  flex: none;
+  grid-area: 2 / 2;
+  align-self: center;
   width: 70px;
   height: 300px;
   position: relative;

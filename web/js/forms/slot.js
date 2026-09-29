@@ -30,15 +30,15 @@ export function mount(stage, ctx) {
             <div class="slot-window"><div class="slot-reel"></div></div>
             <div class="slot-payline"></div>
           </div>
-          <div class="slot-lever" role="button" tabindex="0" aria-label="拉下拉杆开始抽奖">
-            <span class="lever-slot"></span>
-            <span class="lever-arm">
-              <span class="lever-stick"></span>
-              <span class="lever-knob"></span>
-            </span>
-          </div>
         </div>
         <button class="btn-primary slot-btn" type="button">开抽</button>
+        <div class="slot-lever" role="button" tabindex="0" aria-label="拉下拉杆开始抽奖">
+          <span class="lever-slot"></span>
+          <span class="lever-arm">
+            <span class="lever-stick"></span>
+            <span class="lever-knob"></span>
+          </span>
+        </div>
       </div>
       <p class="stage-hint">拉下拉杆，三灯亮好运</p>
     </div>`;
