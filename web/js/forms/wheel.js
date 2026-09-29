@@ -70,6 +70,22 @@ export function mount(stage, ctx) {
     const r = size / 2;
     const seg = TAU / items.length;
 
+    /* 名称带几何：中心钮外缘 → emoji 内缘，字号由最长的名字实测宽度决定
+       （emoji 占宽与中心钮半径都取真实渲染尺寸——窄屏钮是固定 px，不随 15% 比例），
+       全盘统一字号保证观感一致 */
+    const emojiFont = Math.max(26, size * 0.075);
+    const nameTexts = items.map((it) => (it.name.length > 6 ? it.name.slice(0, 6) : it.name));
+    c.font = `900 100px ${getComputedStyle(document.body).fontFamily}`;
+    const widestAt100 = Math.max(...nameTexts.map((n) => c.measureText(n).width));
+    c.font = `${emojiFont}px sans-serif`;
+    const emojiW = Math.max(...items.map((it) => c.measureText(it.emoji).width));
+    const hubRect = hub.getBoundingClientRect();
+    const hubR = (hubRect.width > 0 ? hubRect.width : size * 0.15) / 2;
+    const bandStart = hubR + size * 0.01;                  // 中心钮外缘 + 间距
+    const bandEnd = r * 0.82 - emojiW / 2 - size * 0.01;   // emoji 左缘（0.82r）- 间距
+    const nameFont = Math.max(13, Math.min(size * 0.05, ((bandEnd - bandStart) * 100) / widestAt100));
+    const bandMid = (bandStart + bandEnd) / 2;
+
     items.forEach((item, i) => {
       const a0 = i * seg;
       const isThanks = item.id === "thanks";
@@ -89,16 +105,15 @@ export function mount(stage, ctx) {
       c.rotate(mid);
       c.textAlign = "center";
       c.textBaseline = "middle";
-      // emoji 挂在外圈（0.81r：给 6 字名留出径向余量，字号微缩 0.075 控制占位）
-      c.font = `${Math.max(26, size * 0.075)}px sans-serif`;
-      c.fillText(item.emoji, r * 0.81, 0);
-      // 名称沿半径排布（系数 0.043：6 字名外端与 emoji 左缘余 ~3px、内端距中心钮 ~16px@860）
+      // emoji 挂在外圈（0.82r）
+      c.font = `${emojiFont}px sans-serif`;
+      c.fillText(item.emoji, r * 0.82, 0);
+      // 名称沿半径排布：锚在名称带中点，宽度实测自适应，绝不压钮/emoji
       c.fillStyle = isThanks ? pal.thanksInk : pal.ink;
-      c.font = `900 ${Math.max(17, size * 0.043)}px ${getComputedStyle(document.body).fontFamily}`;
+      c.font = `900 ${nameFont}px ${getComputedStyle(document.body).fontFamily}`;
       c.shadowColor = "rgba(0,0,0,.35)";
       c.shadowBlur = 8;
-      const name = item.name.length > 6 ? item.name.slice(0, 6) : item.name;
-      c.fillText(name, r * 0.455, 0);
+      c.fillText(nameTexts[i], bandMid, 0);
       c.restore();
     });
   }
@@ -209,6 +224,7 @@ export function mount(stage, ctx) {
 
   const ro = new ResizeObserver(resize);
   ro.observe(wrap);
+  ro.observe(hub); // 窄屏媒体查询切换钮的固定/比例尺寸时不经 wrap 变化，需单独触发重绘
   const onTheme = () => renderStatic();
   const onPrizes = () => {
     items = ctx.items();

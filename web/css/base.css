@@ -33,7 +33,7 @@ button { font-family: inherit; }
 .topbar {
   position: relative; z-index: 2;
   display: flex; align-items: center; justify-content: center;
-  padding: 12px clamp(16px, 4vw, 44px) 6px;
+  padding: 10px clamp(16px, 4vw, 44px) 4px;
 }
 
 /* 标题页面居中；工具栏钉在右侧，不占居中位 */
@@ -47,7 +47,7 @@ button { font-family: inherit; }
 .brand-name {
   margin: 0;
   font-family: var(--font-display);
-  font-size: clamp(22px, 3.2vw, 30px);
+  font-size: clamp(28px, 4vw, 44px);
   font-weight: 800;
   letter-spacing: var(--track-display, .04em);
   line-height: 1.15;
@@ -234,10 +234,9 @@ button { font-family: inherit; }
 
 .wheel-wrap {
   position: relative;
-  /* px 上限 780→860；vh 因子 77→78：78vh 下指针顶部（top:-34px）在
-     vh≈641 以上不被舞台 overflow:hidden 裁剪（640/650/680 等分屏高度安全）；
-     盘体放大同时扇区文字系数同步上调 */
-  width: min(860px, 94vw, 78vh);
+  /* px 上限 780→860；vh 因子 77→76：76vh 下指针顶部（top:-34px）在
+     vh≈636 以上不被舞台 overflow:hidden 裁剪（顶栏加大后仍覆盖 640/650/680 分屏高度） */
+  width: min(860px, 94vw, 76vh);
   aspect-ratio: 1;
   margin: 0 auto;
 }
@@ -279,10 +278,10 @@ button { font-family: inherit; }
   position: absolute; left: 50%; top: 50%;
   transform: translate(-50%, -50%);
   z-index: 4;
-  /* 随盘缩放（16% ≈ 满尺寸 138px@860）：小视口 78vh 压盘时中心钮跟着缩。
-     名字带内端 = 0.2275×size − 3×0.043×size ≈ 0.0985×size，钮半径 0.08×size，
-     余量 ≈ 0.0185×size（约 16px@860），首字不探进钮下 */
-  width: 16%; height: 16%;
+  /* 随盘缩放（15% ≈ 满尺寸 129px@860）：小视口 76vh 压盘时中心钮跟着缩。
+     名字带 = 钮外缘(0.075×size+间距) → emoji 内缘(0.82r−实测emoji宽/2−间距)，
+     字号由最长名实测宽度自适应（见 wheel.js renderOffscreen），首字不探进钮下 */
+  width: 15%; height: 15%;
   border-radius: 50%;
   border: 4px solid var(--hub-ring, rgba(255,255,255,.75));
   background: var(--btn-bg);
@@ -505,7 +504,9 @@ button { font-family: inherit; }
 
 @media (max-width: 640px) {
   .stage { padding: 12px 12px; }
-  .wheel-hub { width: 88px; height: 88px; font-size: 20px; }
+  /* 窄屏钮固定 72px：比例 15% 在手机盘径下不足容纳"开抽"文字；
+     wheel.js 的名称带起点的真实钮半径经 getBoundingClientRect 实测，与此处联动 */
+  .wheel-hub { width: 72px; height: 72px; font-size: 20px; }
   /* 窄屏标题与工具栏改为上下堆叠，避免重叠 */
   .topbar {
     flex-direction: column;
