@@ -18,6 +18,8 @@ from .lottery import (
     DYNAMIC_MODES,
     effective_weights,
     probability_table,
+    slot_odds,
+    slot_pool,
 )
 from .store import DEFAULT_ADMIN_TOKEN, Store
 
@@ -76,6 +78,41 @@ def _thanks_weight() -> float:
     return float(store.get_config().get("thanks_weight", "9"))
 
 
+def _slot_cfg() -> dict:
+    cfg = store.get_config()
+    return {
+        "diamond_weight": _safe_nonneg(cfg.get("slot_diamond_weight"), 10.0),
+        "gamesir_enabled": cfg.get("slot_gamesir_enabled", "1") == "1",
+        "jackpot_enabled": cfg.get("slot_jackpot_enabled", "1") == "1",
+    }
+
+
+def _safe_nonneg(raw, fallback: float) -> float:
+    try:
+        v = float(raw)
+        return v if math.isfinite(v) and v >= 0 else fallback
+    except (TypeError, ValueError):
+        return fallback
+
+
+def _slot_pool_and_weights(dyn_enabled: bool, dyn_mode: str):
+    """老虎机共用的奖品有效权重表（与转盘同一套权重/动态转移口径）。"""
+    prize_eff, _ = effective_weights(store.specs(), _thanks_weight(), dyn_enabled, dyn_mode)
+    return prize_eff
+
+
+def slot_section(dyn_enabled: bool, dyn_mode: str) -> dict:
+    """后台老虎机区块：开关、钻石权重与理论赔率（三轴独立口径）。"""
+    slot = _slot_cfg()
+    pool = slot_pool(
+        _slot_pool_and_weights(dyn_enabled, dyn_mode),
+        slot["diamond_weight"],
+        slot["gamesir_enabled"],
+    )
+    odds = slot_odds(pool)  # 原始浮点：三同等小概率事件 round 到 4 位会被抹成 0，展示精度交给前端 pct()
+    return {**slot, "odds": odds}
+
+
 def _public_prizes() -> list[dict]:
     return [
         {
@@ -95,11 +132,16 @@ def _public_prizes() -> list[dict]:
 @app.get("/api/meta")
 def get_meta():
     cfg = store.get_config()
+    slot = _slot_cfg()
     return {
         "event_name": cfg.get("event_name", "幸运抽奖"),
         "event_date": cfg.get("event_date", ""),
         "event_note": cfg.get("event_note", ""),
         "win_stop_at": _safe_float(cfg.get("win_stop_at"), 5.5),
+        "slot": {
+            "gamesir_enabled": slot["gamesir_enabled"],
+            "jackpot_enabled": slot["jackpot_enabled"],
+        },
     }
 
 
@@ -122,13 +164,32 @@ def get_prizes():
     }
 
 
+class DrawIn(BaseModel):
+    """抽奖来源：wheel=转盘（永远抽不到手柄），slot=老虎机（对对碰规则）。"""
+
+    game: str = Field(default="wheel", pattern="^(wheel|slot)$")
+
+
 @app.post("/api/draw")
-def draw():
+def draw(payload: DrawIn | None = None):
+    game = payload.game if payload else "wheel"
     dyn_enabled, dyn_mode = _dyn()
     prize_eff, thanks_eff = effective_weights(
         store.specs(), _thanks_weight(), dyn_enabled, dyn_mode
     )
+    if game == "slot":
+        slot = _slot_cfg()
+        return store.draw_slot(
+            rng,
+            prize_eff,
+            slot["diamond_weight"],
+            slot["gamesir_enabled"],
+            slot["jackpot_enabled"],
+        )
+    # 转盘：盖世小鸡手柄不进转盘奖池（产品规则），其权重不参与归一化
+    prize_eff.pop("gamesir", None)
     outcome = store.draw(rng, prize_eff, thanks_eff)
+    outcome["game"] = "wheel"
     return outcome
 
 
@@ -144,6 +205,7 @@ def sample_results(count: int = Query(default=7, ge=1, le=20)):
     prize_eff, thanks_eff = effective_weights(
         store.specs(), _thanks_weight(), dyn_enabled, dyn_mode
     )
+    prize_eff.pop("gamesir", None)  # 与转盘口径一致：手柄不进转盘奖池
     prizes = {p["id"]: p for p in store.list_prizes()}
     samples = []
     for _ in range(count):
@@ -167,6 +229,12 @@ def admin_state():
     probs = probability_table(specs, tw, dyn_enabled, dyn_mode)
     # 动态转移量（权重口径）= 谢谢参与有效权重 - 基础权重，供后台解释概率来源
     _, thanks_eff = effective_weights(specs, tw, dyn_enabled, dyn_mode)
+    # 后台"转盘概率"列按转盘真实口径展示：剔除手柄后重新归一化（转盘永远抽不到手柄）
+    wheel_eff = {pid: w for pid, w in probs.items() if pid not in ("gamesir", "thanks")}
+    wheel_total = sum(wheel_eff.values()) + probs.get("thanks", 0.0)
+    if wheel_total > 0:
+        probs = {**{pid: w / wheel_total for pid, w in wheel_eff.items()},
+                 "gamesir": 0.0, "thanks": probs.get("thanks", 0.0) / wheel_total}
     return {
         "prizes": [
             {
@@ -186,6 +254,7 @@ def admin_state():
         "dynamic_enabled": dyn_enabled,
         "dynamic_mode": dyn_mode,
         "win_stop_at": _safe_float(store.get_config().get("win_stop_at"), 5.5),
+        "slot": slot_section(dyn_enabled, dyn_mode),
         "event": {
             "name": store.get_config().get("event_name", ""),
             "date": store.get_config().get("event_date", ""),
@@ -244,6 +313,27 @@ def admin_dynamic(payload: DynamicIn):
         {"dynamic_enabled": "1" if payload.enabled else "0", "dynamic_mode": payload.mode}
     )
     return {"ok": True}
+
+
+class SlotIn(BaseModel):
+    diamond_weight: WeightValue | None = None
+    gamesir_enabled: bool | None = None
+    jackpot_enabled: bool | None = None
+
+
+@app.put("/api/admin/slot", dependencies=[Depends(admin_auth)])
+def admin_slot(payload: SlotIn):
+    """老虎机专属配置：钻石权重、手柄开关、三钻超级大奖开关。"""
+    updates = {}
+    if payload.diamond_weight is not None:
+        updates["slot_diamond_weight"] = f"{payload.diamond_weight:g}"
+    if payload.gamesir_enabled is not None:
+        updates["slot_gamesir_enabled"] = "1" if payload.gamesir_enabled else "0"
+    if payload.jackpot_enabled is not None:
+        updates["slot_jackpot_enabled"] = "1" if payload.jackpot_enabled else "0"
+    if updates:
+        store.set_config(updates)
+    return {"ok": True, **_slot_cfg()}
 
 
 class WinStopIn(BaseModel):

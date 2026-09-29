@@ -15,12 +15,23 @@
     margin: 0; background: var(--bg); color: var(--ink);
     font: 14px/1.6 -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
   }
-  .wrap { max-width: 980px; margin: 0 auto; padding: 28px 20px 60px; }
+  .wrap { max-width: 1020px; margin: 0 auto; padding: 28px 20px 60px; }
+  .head-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
   h1 { font-size: 20px; margin: 0 0 4px; }
-  .sub { color: var(--dim); font-size: 13px; margin-bottom: 22px; }
+  .sub { color: var(--dim); font-size: 13px; margin: 0 0 16px; }
+  /* 顶部状态摘要条 */
+  .sumbar { display: flex; gap: 12px; flex-wrap: wrap; margin: 0 0 18px; }
+  .chip {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 8px 14px; font-size: 12.5px; color: var(--dim);
+    display: flex; align-items: center; gap: 7px;
+  }
+  .chip b { color: var(--ink); font-size: 16px; font-variant-numeric: tabular-nums; }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-bottom: 18px; }
-  .card h2 { font-size: 15px; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+  .card h2 { font-size: 15px; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .card h2 .hint { font-weight: 400; color: var(--dim); font-size: 12px; }
+  .sec-title { font-size: 13px; color: var(--dim); font-weight: 600; margin: 18px 0 8px; display: flex; align-items: center; gap: 8px; }
+  .sec-title .hint { font-weight: 400; font-size: 12px; }
   label { display: block; font-size: 12px; color: var(--dim); margin-bottom: 4px; }
   input, select {
     background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
@@ -42,16 +53,29 @@
   th { color: var(--dim); font-weight: 600; font-size: 12px; }
   td input { width: 90px; padding: 6px 8px; }
   td input.stock-in { width: 76px; }
+  .drawn { font-variant-numeric: tabular-nums; color: var(--dim); }
   .prob-bar { position: relative; background: var(--panel-2); border-radius: 999px; height: 10px; width: 130px; overflow: hidden; }
   .prob-bar i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #4f8cff, #7bd0ff); border-radius: 999px; transition: width .5s ease; }
   .prob-val { font-variant-numeric: tabular-nums; color: var(--dim); font-size: 12px; margin-left: 8px; }
-  .switch { display: flex; align-items: center; gap: 10px; }
-  .switch select { width: auto; }
   .note { font-size: 12px; color: var(--dim); margin-top: 8px; line-height: 1.7; }
-  .stat-grid { display: flex; gap: 14px; flex-wrap: wrap; }
-  .stat { background: var(--panel-2); border-radius: 10px; padding: 10px 16px; min-width: 120px; }
-  .stat b { display: block; font-size: 20px; }
-  .stat span { font-size: 12px; color: var(--dim); }
+  .note b { color: var(--ink); }
+  .readout { font-size: 13px; margin-top: 10px; color: var(--ink); }
+  .readout b { font-variant-numeric: tabular-nums; }
+  .readout .ok { color: var(--ok); }
+  /* 开关按钮：开/关 视觉状态 */
+  .tgl-box { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+  .toggle {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--ink);
+    padding: 10px 16px; border-radius: 10px; font-weight: 600;
+  }
+  .toggle .t-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--dim); flex: none; transition: background .2s; }
+  .toggle .t-state { font-size: 12px; padding: 1px 10px; border-radius: 999px; background: var(--line); color: var(--dim); }
+  .toggle.on { border-color: rgba(53, 201, 142, .65); }
+  .toggle.on .t-dot { background: var(--ok); box-shadow: 0 0 8px rgba(53, 201, 142, .8); }
+  .toggle.on .t-state { background: rgba(53, 201, 142, .18); color: var(--ok); }
+  .toggle.off { border-color: rgba(255, 122, 122, .45); }
+  .toggle.off .t-state { background: rgba(255, 122, 122, .12); color: #ff7a7a; }
   #history { max-height: 320px; overflow: auto; }
   .token-gate { max-width: 380px; margin: 18vh auto; text-align: center; }
   .token-gate input { text-align: center; margin: 14px 0; }
@@ -69,6 +93,8 @@
   .st-sep { color: var(--dim); }
   .st-full { padding: 5px 10px; font-size: 12px; }
   .prob-note { font-size: 11px; color: var(--warn); margin-left: 8px; white-space: nowrap; }
+  .odds-mixed td { color: var(--dim); }
+  .odds-mixed td[colspan] { font-variant-numeric: tabular-nums; color: var(--ink); }
 </style>
 </head>
 <body>
@@ -82,59 +108,26 @@
 </div>
 
 <div class="wrap" id="console" hidden>
-  <h1>抽奖后台</h1>
-  <p class="sub">概率 / 库存 / 动态转移 · 改动即时生效，无需重启</p>
-
-  <div class="card">
-    <h2>活动信息</h2>
-    <div class="row">
-      <div class="field"><label>活动名称</label><input id="ev-name"></div>
-      <div class="field"><label>开奖日期（国庆前夜填 2026-09-30）</label><input id="ev-date" placeholder="2026-09-30"></div>
-      <div class="field"><label>一句话副标</label><input id="ev-note"></div>
-      <button id="ev-save">保存</button><span class="msg" id="ev-msg"></span>
+  <div class="head-row">
+    <div>
+      <h1>抽奖后台</h1>
+      <p class="sub">概率 / 库存 / 老虎机 · 改动即时生效，无需重启</p>
     </div>
+    <button id="refresh" class="ghost">↻ 刷新</button>
+  </div>
+
+  <div class="sumbar">
+    <div class="chip" id="sum-stock">🎁 库存合计 <b>–</b></div>
+    <div class="chip" id="sum-draws">🎯 累计抽奖 <b>–</b></div>
+    <div class="chip" id="sum-thanks">🙏 谢谢参与 <b>–</b></div>
+    <div class="chip" id="sum-slot">🎰 手柄 <b>–</b> · 超级大奖 <b>–</b></div>
   </div>
 
   <div class="card">
-    <h2>谢谢参与 · 动态概率 <span class="hint">奖品被抽走时，概率自动让给谢谢参与</span></h2>
-    <div class="row">
-      <div class="field" style="max-width:180px"><label>谢谢参与基础权重</label><input type="number" id="thanks-weight" min="0" step="0.5"></div>
-      <div class="switch">
-        <label style="margin:0">动态转移</label>
-        <select id="dyn-enabled">
-          <option value="1">开启</option>
-          <option value="0">关闭</option>
-        </select>
-        <select id="dyn-mode">
-          <option value="per_win">每抽一件渐移（推荐）</option>
-          <option value="depleted">抽空才整移</option>
-        </select>
-        <button id="dyn-save">保存</button><span class="msg" id="dyn-msg"></span>
-      </div>
-    </div>
-    <p class="note" id="dyn-explain"></p>
-  </div>
-
-  <div class="card">
-    <h2>中奖音效 <span class="hint">中奖时音乐播到几秒收刀，由你试听决定</span></h2>
-    <div class="row">
-      <div class="field" style="max-width:220px">
-        <label>中奖时音乐停在（秒，0.5 - 8）</label>
-        <input type="number" id="win-stop" min="0.5" max="8" step="0.05">
-      </div>
-      <button id="win-stop-save">保存</button><span class="msg" id="ws-msg"></span>
-      <button id="ws-preview" class="ghost">▶ 试听（到点即停）</button>
-      <button id="ws-preview-stop" class="ghost" hidden>⏹ 停止试听</button>
-    </div>
-    <p class="note">试听会从头播放整曲，并在设置的秒数处直接停止——中奖观众听到的就是这一刀。
-      建议卡在"停"字唱完的位置（约 5.3 - 5.5 秒）；保存后前台刷新即可生效。</p>
-  </div>
-
-  <div class="card">
-    <h2>奖品与概率 <span class="hint">权重为相对值；库存改动即时生效，无需保存</span></h2>
+    <h2>🎁 奖品与库存 <span class="hint">转盘与老虎机共用这套权重；转盘永远抽不到手柄 · 库存改动即时生效</span></h2>
     <table>
       <thead><tr>
-        <th>奖品</th><th>基础权重</th><th>当前概率</th><th>库存（剩余 / 总量）</th>
+        <th>奖品</th><th>已抽出</th><th>基础权重</th><th>转盘概率</th><th>库存（剩余 / 总量）</th>
       </tr></thead>
       <tbody id="prize-rows"></tbody>
     </table>
@@ -146,12 +139,75 @@
   </div>
 
   <div class="card">
-    <h2>统计</h2>
-    <div class="stat-grid" id="stat-grid"></div>
+    <h2>🎰 老虎机 <span class="hint">三轴对对碰 · 三轴全不同 = 没抽到</span></h2>
+    <div class="row">
+      <div class="field" style="max-width:220px">
+        <label>💎 钻石权重（单轴相对权重）</label>
+        <input type="number" id="diamond-weight" min="0" step="0.5">
+      </div>
+      <button id="slot-dw-save">保存钻石权重</button><span class="msg" id="slot-dw-msg"></span>
+    </div>
+    <p class="note">钻石代替谢谢参与上轴：<b>两钻</b> = 现场任选一件非手柄奖品；<b>三钻</b> = 超级大奖（除手柄外每类仍有库存的奖品各一份）。</p>
+    <div class="row" style="margin-top:16px; align-items:flex-start">
+      <div class="tgl-box" style="min-width:240px">
+        <button type="button" class="toggle off" id="slot-gamesir" aria-pressed="false">
+          <span class="t-dot"></span>🎮 手柄可被老虎机抽出<b class="t-state">关</b>
+        </button>
+        <p class="note">手柄进老虎机奖池（转盘侧永远不含手柄）。人多的场合再打开。</p>
+        <span class="msg" id="slot-gamesir-msg"></span>
+      </div>
+      <div class="tgl-box" style="min-width:240px">
+        <button type="button" class="toggle off" id="slot-jackpot" aria-pressed="false">
+          <span class="t-dot"></span>💎 三钻超级大奖<b class="t-state">关</b>
+        </button>
+        <p class="note">关闭后三钻组合会被自动重抽，不会开出超级大奖。</p>
+        <span class="msg" id="slot-jackpot-msg"></span>
+      </div>
+    </div>
+    <div class="sec-title">赔率面板 <span class="hint">三轴独立理论值</span></div>
+    <table>
+      <thead><tr>
+        <th>符号</th><th>三同概率</th><th>两同概率</th>
+      </tr></thead>
+      <tbody id="odds-rows"></tbody>
+    </table>
+    <p class="note">以上为三轴独立抽取的理论值；被关闭的组合（两同手柄、超级大奖关闭时的三钻）会自动重抽，实际分布略偏向其余组合。</p>
   </div>
 
   <div class="card">
-    <h2>抽奖记录 <span class="hint">最近 100 条</span></h2>
+    <h2>⚖️ 概率与权重 <span class="hint">谢谢参与 · 动态转移</span></h2>
+    <div class="row" style="align-items:flex-start">
+      <div class="tgl-box" style="min-width:220px">
+        <button type="button" class="toggle off" id="dyn-toggle" aria-pressed="false">
+          <span class="t-dot"></span>动态转移<b class="t-state">关</b>
+        </button>
+        <p class="note">开启后，奖品被抽走让出的权重会推高谢谢参与的概率。</p>
+      </div>
+      <div class="field" style="max-width:240px">
+        <label>转移方式</label>
+        <select id="dyn-mode">
+          <option value="per_win">每抽一件渐移（推荐）</option>
+          <option value="depleted">抽空才整移</option>
+        </select>
+      </div>
+      <button id="dyn-save">保存</button><span class="msg" id="dyn-msg"></span>
+    </div>
+    <p class="note" id="dyn-explain"></p>
+    <p class="readout" id="dyn-readout"></p>
+  </div>
+
+  <div class="card">
+    <h2>🎪 活动信息</h2>
+    <div class="row">
+      <div class="field"><label>活动名称</label><input id="ev-name"></div>
+      <div class="field"><label>开奖日期（国庆前夜填 2026-09-30）</label><input id="ev-date" placeholder="2026-09-30"></div>
+      <div class="field"><label>一句话副标</label><input id="ev-note"></div>
+      <button id="ev-save">保存</button><span class="msg" id="ev-msg"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>📜 抽奖记录 <span class="hint">最近 100 条</span></h2>
     <div id="history"></div>
     <div class="row" style="margin-top:12px">
       <button id="h-reset" class="danger">清空记录</button><span class="msg" id="h-msg"></span>
@@ -192,29 +248,99 @@ function flash(id, text, ok = true) {
   setTimeout(() => { el.textContent = ""; }, 2600);
 }
 
+// 概率 → 百分比文案（乘 100，保留 1-2 位小数；过小值显示 <0.01% 避免误读为 0）
+function pct(v, digits = 2) {
+  const x = (Number(v) || 0) * 100;
+  const min = Math.pow(10, -digits);
+  if (x > 0 && x < min) return "<" + min.toFixed(digits) + "%";
+  return parseFloat(x.toFixed(digits)) + "%";
+}
+
 let stateData = null;
+
+// ---- 开关按钮视觉状态 ----
+function setToggle(btn, on) {
+  btn.classList.toggle("on", !!on);
+  btn.classList.toggle("off", !on);
+  btn.setAttribute("aria-pressed", String(!!on));
+  btn.querySelector(".t-state").textContent = on ? "开" : "关";
+}
+
+function renderToggles(d) {
+  setToggle($("#slot-gamesir"), d.slot.gamesir_enabled);
+  setToggle($("#slot-jackpot"), d.slot.jackpot_enabled);
+  setToggle($("#dyn-toggle"), d.dynamic_enabled);
+}
+
+// 权重输入是"保存权重"制的半提交状态，不因其它保存触发的刷新被重置：快照 → 重渲染 → 回填
+function snapWeights() {
+  const m = {};
+  document.querySelectorAll(".w-in").forEach((el) => { m[el.dataset.id] = el.value; });
+  const tw = $("#tw-row");
+  return { m, tw: tw ? tw.value : null };
+}
+
+function restoreWeights(snap) {
+  document.querySelectorAll(".w-in").forEach((el) => {
+    if (el.dataset.id in snap.m) el.value = snap.m[el.dataset.id];
+  });
+  const tw = $("#tw-row");
+  if (tw && snap.tw !== null) tw.value = snap.tw;
+}
+
+function renderOdds(d) {
+  const odds = (d.slot && d.slot.odds) || {};
+  const nameOfSym = (sym) => {
+    if (sym === "diamond") return "💎 钻石";
+    const p = d.prizes.find((x) => x.id === sym);
+    return p ? `${p.emoji} ${p.name}` : sym;
+  };
+  const syms = Object.keys(odds)
+    .filter((k) => k.startsWith("triple_"))
+    .map((k) => k.slice("triple_".length));
+  const rows = syms.map((s) => {
+    let name = nameOfSym(s);
+    if (s === "diamond" && d.slot && !d.slot.jackpot_enabled) {
+      name += ` <span class="prob-note" title="超级大奖已关闭，三钻会被自动重抽">重抽</span>`;
+    }
+    let pair = pct(odds["pair_" + s]);
+    if (s === "gamesir") {
+      pair += ` <span class="prob-note" title="手柄仅一件，两同手柄会被自动重抽">重抽</span>`;
+    }
+    return `<tr><td>${name}</td><td>${pct(odds["triple_" + s])}</td><td>${pair}</td></tr>`;
+  });
+  rows.push(`<tr class="odds-mixed"><td>🎲 没抽到（全不同）</td><td colspan="2">${pct(odds.mixed)}</td></tr>`);
+  $("#odds-rows").innerHTML = rows.join("");
+}
 
 function renderState(d) {
   stateData = d;
+  renderToggles(d);
   $("#ev-name").value = d.event.name || "";
   $("#ev-date").value = d.event.date || "";
   $("#ev-note").value = d.event.note || "";
-  $("#thanks-weight").value = d.thanks_weight;
-  $("#dyn-enabled").value = d.dynamic_enabled ? "1" : "0";
   $("#dyn-mode").value = d.dynamic_mode;
-  $("#win-stop").value = d.win_stop_at;
+  $("#diamond-weight").value = d.slot.diamond_weight;
   $("#dyn-explain").textContent = MODE_TEXT[d.dynamic_mode] || "";
+  const bonusW = d.thanks_bonus || 0;
+  $("#dyn-readout").innerHTML =
+    `当前谢谢参与概率 <b>${pct(d.thanks_probability, 1)}</b>` +
+    (bonusW > 0.0005
+      ? `，已被奖品让出的权重推高 <b class="ok">+${bonusW.toFixed(2)}</b>（权重口径）`
+      : "，暂无转移加成");
 
+  const byPrize = d.stats.by_prize || {};
   const tbody = $("#prize-rows");
   tbody.innerHTML = "";
   for (const p of d.prizes) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${p.emoji} ${p.name}</td>
+      <td class="drawn">${byPrize[p.id] || 0}</td>
       <td><input type="number" min="0" step="0.5" class="w-in" data-id="${p.id}" value="${p.base_weight}"></td>
       <td><div style="display:flex;align-items:center">
         <div class="prob-bar"><i style="width:${(p.probability * 100).toFixed(1)}%"></i></div>
-        <span class="prob-val">${(p.probability * 100).toFixed(1)}%</span></div></td>
+        <span class="prob-val">${pct(p.probability, 1)}</span></div></td>
       <td><div class="stock-ctl" data-id="${p.id}">
         <button type="button" class="st-btn" data-act="dec" title="剩余减一">−</button>
         <input type="number" min="0" step="1" class="stock-in st-remaining" value="${p.remaining}" title="剩余">
@@ -225,15 +351,15 @@ function renderState(d) {
       </div></td>`;
     tbody.appendChild(tr);
   }
-  const bonusW = (d.thanks_bonus || 0).toFixed(2);
   const thanksTr = document.createElement("tr");
   thanksTr.innerHTML = `
     <td>🙏 谢谢参与</td>
+    <td class="drawn">${byPrize["thanks"] || 0}</td>
     <td><input type="number" min="0" step="0.5" id="tw-row" value="${d.thanks_weight}"></td>
     <td><div style="display:flex;align-items:center">
       <div class="prob-bar"><i style="width:${(d.thanks_probability * 100).toFixed(1)}%"></i></div>
-      <span class="prob-val">${(d.thanks_probability * 100).toFixed(1)}%</span>
-      ${d.thanks_bonus > 0.0005 ? `<span class="prob-note" title="动态转移：奖品消耗的库存把权重让给了谢谢参与">含转移 +${bonusW} 权重</span>` : ""}
+      <span class="prob-val">${pct(d.thanks_probability, 1)}</span>
+      ${bonusW > 0.0005 ? `<span class="prob-note" title="动态转移：奖品消耗的库存把权重让给了谢谢参与">含转移 +${bonusW.toFixed(2)} 权重</span>` : ""}
     </div></td>
     <td>不限量</td>`;
   tbody.appendChild(thanksTr);
@@ -243,26 +369,25 @@ function renderState(d) {
   if (!d.dynamic_enabled) {
     dynNote.textContent = "动态转移已关闭：奖品抽空后其权重直接退出奖池，不放给谢谢参与。";
     dynNote.hidden = false;
-  } else if (d.thanks_bonus > 0.0005) {
+  } else if (bonusW > 0.0005) {
     dynNote.textContent = d.dynamic_mode === "depleted"
-      ? `谢谢参与概率 = 基础权重份额 + 动态转移（已让出 +${bonusW} 权重）：depleted 模式下奖品抽空后其全部权重一次性让给谢谢参与。权重设 0 时转移仍会产生概率；要恒为 0，请关闭动态转移。`
-      : `谢谢参与概率 = 基础权重份额 + 动态转移（已让出 +${bonusW} 权重）：奖品每消耗一份库存，就让出一份概率给谢谢参与。所以谢谢参与权重设为 0 时概率也不为 0；要让它恒为 0，请关闭动态转移。`;
+      ? `谢谢参与概率 = 基础权重份额 + 动态转移（已让出 +${bonusW.toFixed(2)} 权重）：depleted 模式下奖品抽空后其全部权重一次性让给谢谢参与。权重设 0 时转移仍会产生概率；要恒为 0，请关闭动态转移。`
+      : `谢谢参与概率 = 基础权重份额 + 动态转移（已让出 +${bonusW.toFixed(2)} 权重）：奖品每消耗一份库存，就让出一份概率给谢谢参与。所以谢谢参与权重设为 0 时概率也不为 0；要让它恒为 0，请关闭动态转移。`;
     dynNote.hidden = false;
   } else {
     dynNote.hidden = true;
   }
 
-  const grid = $("#stat-grid");
-  const byPrize = d.stats.by_prize || {};
-  const nameOf = (id) => (id === "thanks" ? "🙏 谢谢参与" : (d.prizes.find((p) => p.id === id) || {}).name || id);
-  const entries = Object.entries(byPrize).sort((a, b) => b[1] - a[1]);
+  renderOdds(d);
+
+  // 顶部状态摘要条
   const totalRemaining = d.prizes.reduce((s, p) => s + p.remaining, 0);
   const totalStock = d.prizes.reduce((s, p) => s + p.total_stock, 0);
-  grid.innerHTML =
-    `<div class="stat"><b>${totalRemaining}</b><span>奖品总余量 / 共 ${totalStock} 份</span></div>` +
-    `<div class="stat"><b>${d.stats.total_draws}</b><span>累计抽奖</span></div>` +
-    entries.map(([id, n]) => `<div class="stat"><b>${n}</b><span>${nameOf(id)}</span></div>`).join("");
-  if (!entries.length) grid.innerHTML += `<div class="stat"><b>0</b><span>还没有人抽过</span></div>`;
+  $("#sum-stock").innerHTML = `🎁 库存合计 <b>${totalRemaining}</b> / ${totalStock}`;
+  $("#sum-draws").innerHTML = `🎯 累计抽奖 <b>${d.stats.total_draws}</b>`;
+  $("#sum-thanks").innerHTML = `🙏 谢谢参与 <b>${pct(d.thanks_probability, 1)}</b>`;
+  $("#sum-slot").innerHTML =
+    `🎰 手柄 <b>${d.slot.gamesir_enabled ? "开" : "关"}</b> · 超级大奖 <b>${d.slot.jackpot_enabled ? "开" : "关"}</b>`;
 }
 
 async function loadAll() {
@@ -291,62 +416,79 @@ $("#token-go").addEventListener("click", async () => {
 });
 $("#token-in").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#token-go").click(); });
 
+$("#refresh").addEventListener("click", async () => {
+  const b = $("#refresh");
+  b.disabled = true;
+  try { await loadAll(); }
+  catch (e) { if (e.message !== "unauthorized") flash("#h-msg", "刷新失败：" + e.message, false); }
+  b.disabled = false;
+});
+
 $("#ev-save").addEventListener("click", async () => {
   try {
     await req("/api/admin/event", { method: "PUT", body: JSON.stringify({
       name: $("#ev-name").value, date: $("#ev-date").value, note: $("#ev-note").value,
     })});
     flash("#ev-msg", "已保存");
+    await loadAll();
   } catch (e) { flash("#ev-msg", "失败：" + e.message, false); }
 });
 
-$("#dyn-save").addEventListener("click", async () => {
+// ---- 动态转移：开关即时保存；转移方式 + 保存 按钮一并提交 ----
+async function saveDynamic(enabled, mode, msgId) {
+  const snap = snapWeights();
   try {
-    await req("/api/admin/dynamic", { method: "PUT", body: JSON.stringify({
-      enabled: $("#dyn-enabled").value === "1", mode: $("#dyn-mode").value,
-    })});
-    $("#dyn-explain").textContent = MODE_TEXT[$("#dyn-mode").value] || "";
-    flash("#dyn-msg", "已保存");
+    await req("/api/admin/dynamic", { method: "PUT", body: JSON.stringify({ enabled, mode }) });
+    flash(msgId, "已保存");
     await loadAll();
-  } catch (e) { flash("#dyn-msg", "失败：" + e.message, false); }
-});
-
-// ---- 中奖音效：收刀点设置 + 试听 ----
-let previewAudio = null;
-let previewTimer = 0;
-
-function stopPreview() {
-  if (previewTimer) { clearTimeout(previewTimer); previewTimer = 0; }
-  if (previewAudio) { previewAudio.pause(); previewAudio = null; }
-  $("#ws-preview").hidden = false;
-  $("#ws-preview-stop").hidden = true;
+    restoreWeights(snap);
+  } catch (e) {
+    flash(msgId, "失败：" + e.message, false);
+    if (stateData) renderToggles(stateData); // 恢复开关视觉
+  }
 }
 
-$("#win-stop-save").addEventListener("click", async () => {
-  const v = Number($("#win-stop").value);
-  if (!(v >= 0.5 && v <= 8)) { flash("#ws-msg", "请填 0.5 - 8 之间的秒数", false); return; }
+$("#dyn-toggle").addEventListener("click", () => {
+  const cur = !!(stateData && stateData.dynamic_enabled);
+  saveDynamic(!cur, $("#dyn-mode").value, "#dyn-msg");
+});
+
+$("#dyn-save").addEventListener("click", () => {
+  saveDynamic($("#dyn-toggle").classList.contains("on"), $("#dyn-mode").value, "#dyn-msg");
+});
+
+// ---- 老虎机：钻石权重 + 两个醒目开关（点击即保存，PUT slot 支持部分字段） ----
+$("#slot-dw-save").addEventListener("click", async () => {
+  const v = Number($("#diamond-weight").value);
+  if (!isFinite(v) || v < 0 || v > 100000) {
+    flash("#slot-dw-msg", "请填 0 - 100000 之间的数字", false);
+    return;
+  }
+  const snap = snapWeights();
   try {
-    await req("/api/admin/win_stop", { method: "PUT", body: JSON.stringify({ value: v }) });
-    flash("#ws-msg", "已保存，前台刷新生效");
-  } catch (e) { flash("#ws-msg", "失败：" + e.message, false); }
+    await req("/api/admin/slot", { method: "PUT", body: JSON.stringify({ diamond_weight: v }) });
+    flash("#slot-dw-msg", "已保存");
+    await loadAll();
+    restoreWeights(snap);
+  } catch (e) { flash("#slot-dw-msg", "失败：" + e.message, false); }
 });
 
-$("#ws-preview").addEventListener("click", () => {
-  const v = Number($("#win-stop").value);
-  if (!(v >= 0.5 && v <= 8)) { flash("#ws-msg", "请先填 0.5 - 8 之间的秒数", false); return; }
-  stopPreview();
-  previewAudio = new Audio("/assets/lucky-song.mp3?v=10");
-  previewAudio.onended = () => stopPreview();
-  previewAudio.play().catch(() => { flash("#ws-msg", "浏览器拦截了播放，再点一次", false); });
-  // 精确定时器到点即停（timeupdate 粒度 15-250ms，太粗）
-  previewTimer = setTimeout(() => {
-    if (previewAudio) stopPreview();
-  }, v * 1000);
-  $("#ws-preview").hidden = true;
-  $("#ws-preview-stop").hidden = false;
-});
+async function saveSlotFlag(key, msgId) {
+  const cur = !!(stateData && stateData.slot && stateData.slot[key]);
+  const snap = snapWeights();
+  try {
+    await req("/api/admin/slot", { method: "PUT", body: JSON.stringify({ [key]: !cur }) });
+    flash(msgId, !cur ? "已开启" : "已关闭");
+    await loadAll();
+    restoreWeights(snap);
+  } catch (e) {
+    flash(msgId, "失败：" + e.message, false);
+    if (stateData) renderToggles(stateData); // 恢复开关视觉
+  }
+}
 
-$("#ws-preview-stop").addEventListener("click", stopPreview);
+$("#slot-gamesir").addEventListener("click", () => saveSlotFlag("gamesir_enabled", "#slot-gamesir-msg"));
+$("#slot-jackpot").addEventListener("click", () => saveSlotFlag("jackpot_enabled", "#slot-jackpot-msg"));
 
 $("#w-save").addEventListener("click", async () => {
   try {
@@ -387,20 +529,12 @@ function queueStock(cell, edited = "remaining") {
     cell.querySelector(".st-remaining").value = remaining;
     cell.querySelector(".st-total").value = total;
   }
-  // 权重输入是"保存权重"制的半提交状态，不因库存刷新被重置：重渲染前快照、渲染后回填
-  const wSnap = {};
-  document.querySelectorAll(".w-in").forEach((el) => { wSnap[el.dataset.id] = el.value; });
-  const twEl = $("#tw-row");
-  const twSnap = twEl ? twEl.value : null;
+  const snap = snapWeights();
   stockQueue = stockQueue
     .then(async () => {
       await req("/api/admin/stock", { method: "PUT", body: JSON.stringify({ id, remaining, total }) });
       await loadAll();
-      document.querySelectorAll(".w-in").forEach((el) => {
-        if (el.dataset.id in wSnap) el.value = wSnap[el.dataset.id];
-      });
-      const tw = $("#tw-row");
-      if (tw && twSnap !== null) tw.value = twSnap;
+      restoreWeights(snap);
     })
     .catch((err) => flash("#w-msg", "失败：" + err.message, false));
 }

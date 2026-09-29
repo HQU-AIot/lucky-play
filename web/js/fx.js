@@ -340,11 +340,35 @@ const reveal = {
     const win = result.result === "prize";
     const card = document.getElementById("reveal-card");
     card.classList.toggle("is-thanks", !win);
-    document.getElementById("reveal-kicker").textContent = win ? "🎉 恭喜中奖" : "谢谢参与";
-    document.getElementById("reveal-emoji").textContent = win ? result.prize.emoji : "🙏";
-    document.getElementById("reveal-name").textContent = win ? result.prize.name : "下次一定";
+    // 多奖品结果（老虎机对对碰）：prizes 数组 → 同类合并 ×n；三钻=超级大奖
+    const prizes = Array.isArray(result.prizes) && result.prizes.length
+      ? result.prizes
+      : result.prize ? [result.prize] : [];
+    const parts = [];
+    for (const p of prizes) {
+      const e = parts.find((x) => x.id === p.id);
+      if (e) e.n += 1;
+      else parts.push({ ...p, n: 1 });
+    }
+    const label = parts.map((p) => (p.n > 1 ? `${p.name} ×${p.n}` : p.name)).join("、");
+    const isJackpot =
+      result.game === "slot" &&
+      Array.isArray(result.symbols) &&
+      result.symbols.length === 3 &&
+      result.symbols.every((s) => s === "diamond") &&
+      prizes.length > 0;
+    document.getElementById("reveal-kicker").textContent =
+      win ? (isJackpot ? "💎 超级大奖" : parts.length > 1 ? "🎉 多重中奖" : "🎉 恭喜中奖") : "谢谢参与";
+    document.getElementById("reveal-emoji").textContent = win ? (isJackpot ? "💎" : parts[0].emoji) : "🙏";
+    document.getElementById("reveal-name").textContent = win
+      ? (isJackpot ? "每一个品类都是你的！" : label)
+      : "下次一定";
     document.getElementById("reveal-note").textContent = win
-      ? `好运直达！「${result.prize.name}」已收入囊中，记得找管理员领取～`
+      ? (isJackpot
+        ? `${parts.map((p) => `${p.emoji} ${p.name}${p.n > 1 ? ` ×${p.n}` : ""}`).join("、")}——全部收入囊中，找管理员一次性领取～`
+        : parts.length > 1
+          ? `${label} 已收入囊中，记得找管理员领取～`
+          : `好运直达！「${parts[0].name}」已收入囊中，记得找管理员领取～`)
       : "差一点点而已——好运气正在打包，下一发就到。";
     this.mask.hidden = false;
     document.getElementById("reveal-close").focus();

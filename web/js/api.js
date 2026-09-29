@@ -8,5 +8,10 @@ async function toJson(res) {
 export const api = {
   meta: () => fetch("/api/meta").then(toJson),
   prizes: () => fetch("/api/prizes").then(toJson),
-  draw: () => fetch("/api/draw", { method: "POST" }).then(toJson),
+  draw: (game = "wheel") =>
+    fetch("/api/draw", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ game }),
+    }).then(toJson),
 };

@@ -30,6 +30,9 @@ DEFAULT_CONFIG = {
     "dynamic_enabled": "1",
     "dynamic_mode": DYNAMIC_PER_WIN,
     "win_stop_at": "5.5",
+    "slot_diamond_weight": "10",
+    "slot_gamesir_enabled": "1",
+    "slot_jackpot_enabled": "1",
     "event_name": "幸运抽奖",
     "event_date": "2026-09-30",
     "event_note": "国庆前一天 · 好运相逢",
@@ -206,6 +209,142 @@ class Store:
                 )
                 self._conn.execute("COMMIT")
                 return {"result": "prize" if prize else "thanks", "prize": prize}
+            except Exception:
+                if self._conn.in_transaction:
+                    self._conn.execute("ROLLBACK")
+                raise
+
+    def draw_slot(
+        self,
+        rng,
+        prize_eff: dict[str, float],
+        diamond_weight: float,
+        gamesir_enabled: bool,
+        jackpot_enabled: bool,
+    ) -> dict:
+        """老虎机三轴对对碰：同一事务里抽符号 → 定奖 → 逐件扣减 → 逐件落记录。
+
+        规则（产品口径）：
+        - 三轴全不同 = 没抽到（谢谢参与）；
+        - 两同 = 该奖品 ×1（库存不足 2 时的三同也只发 1）；
+        - 三同普通奖品 = 该奖品 ×2；
+        - 三同手柄 = 手柄 ×1 + 任选一件其它奖品（系统随机）；
+        - 三同钻石 = 超级大奖：除手柄外每类奖品各 ×1（仅发仍有库存的类别），
+          超级大奖开关关闭时该组合重抽；
+        - 两同钻石 = 任选一件非手柄奖品（系统随机，无库存可发时谢谢参与）；
+        - 两同手柄不可能中奖（手柄仅 1 件）→ 重抽。
+        所有"任选"都在事务内由系统随机决定并逐件写 draws 流水，库存可审计。
+        """
+        from .lottery import DIAMOND, slot_outcome, slot_pool, slot_spin
+
+        with self._lock:
+            self._conn.execute("BEGIN IMMEDIATE")
+            try:
+                rows = self._conn.execute(
+                    "SELECT id, name, emoji, remaining, total_stock FROM prizes"
+                ).fetchall()
+                stock = {r["id"]: dict(r) for r in rows}
+                # 池内按事务内库存复筛（与 store.draw 的 usable_eff 口径一致：
+                # 快照后恰被并发抽空的奖品不再出现在轴面组合里）
+                pool = {
+                    pid: w
+                    for pid, w in slot_pool(prize_eff, diamond_weight, gamesir_enabled).items()
+                    if pid == DIAMOND or stock.get(pid, {}).get("remaining", 0) > 0
+                }
+                ts = datetime.now().astimezone().isoformat(timespec="seconds")
+                symbols: list[str] = []
+                wins: list[str] = []
+                result = "thanks"
+                for _ in range(300):
+                    if not pool:
+                        break
+                    symbols = slot_spin(rng, pool)
+                    kind, sym = slot_outcome(symbols)
+                    if kind == "mixed":
+                        break
+                    if kind == "pair":
+                        if sym == DIAMOND:
+                            # 任选 = 有库存的非手柄奖品（与权重无关，保证"每个奖品都可能被选到"）
+                            avail = [
+                                pid
+                                for pid, row in stock.items()
+                                if pid != "gamesir" and row["remaining"] > 0
+                            ]
+                            if avail:
+                                wins = [rng.choice(avail)]
+                                result = "prize"
+                            break
+                        if sym == "gamesir":
+                            continue  # 手柄只有 1 件，两同手柄不构成奖项
+                        wins = [sym] * min(1, int(stock[sym]["remaining"]))  # 两同 = ×1
+                        result = "prize"
+                        break
+                    # triple
+                    if sym == DIAMOND:
+                        if not jackpot_enabled:
+                            continue
+                        # 超级大奖：除手柄外每类有库存的奖品各 ×1（与权重无关）
+                        wins = [
+                            pid
+                            for pid, row in stock.items()
+                            if pid != "gamesir" and row["remaining"] > 0
+                        ]
+                        if wins:
+                            result = "prize"
+                        break
+                    if sym == "gamesir":
+                        other = [
+                            pid
+                            for pid, row in stock.items()
+                            if pid != "gamesir"
+                            and pid != DIAMOND
+                            and row["remaining"] > 0
+                        ]
+                        wins = ["gamesir"] + ([rng.choice(other)] if other else [])
+                        result = "prize"
+                        break
+                    wins = [sym] * min(2, int(stock[sym]["remaining"]))
+                    result = "prize"
+                    break
+
+                granted = []
+                for pid in wins:
+                    row = stock[pid]
+                    if row["remaining"] <= 0:
+                        continue  # 超级大奖口径：只发仍有库存的类别
+                    self._conn.execute(
+                        "UPDATE prizes SET remaining = remaining - 1 WHERE id = ? AND remaining > 0",
+                        (pid,),
+                    )
+                    row["remaining"] -= 1
+                    granted.append(pid)
+                    self._conn.execute(
+                        "INSERT INTO draws (ts, result, prize_id, prize_name) VALUES (?,?,?,?)",
+                        (ts, "prize", pid, row["name"]),
+                    )
+                if not granted:
+                    self._conn.execute(
+                        "INSERT INTO draws (ts, result, prize_id, prize_name) VALUES (?,?,?,?)",
+                        (ts, "thanks", None, None),
+                    )
+                self._conn.execute("COMMIT")
+                prizes = [
+                    {
+                        "id": pid,
+                        "name": stock[pid]["name"],
+                        "emoji": stock[pid]["emoji"],
+                        "remaining": int(stock[pid]["remaining"]),
+                        "total": int(stock[pid]["total_stock"]),
+                    }
+                    for pid in granted
+                ]
+                return {
+                    "result": "prize" if granted else "thanks",
+                    "prize": prizes[0] if prizes else None,
+                    "prizes": prizes,
+                    "symbols": symbols,
+                    "game": "slot",
+                }
             except Exception:
                 if self._conn.in_transaction:
                     self._conn.execute("ROLLBACK")

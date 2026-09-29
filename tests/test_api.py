@@ -71,7 +71,7 @@ def test_admin_weights_and_probability():
     # 动态转移关闭后，概率应精确等于权重比
     client.put("/api/admin/dynamic", json={"enabled": False, "mode": "per_win"}, headers=TOKEN)
     state = client.get("/api/admin/state", headers=TOKEN).json()
-    total_w = 50 + 20 + 15 + 12 + 10 + 8 + 6 + 2 + 25
+    total_w = 50 + 20 + 15 + 12 + 10 + 8 + 6 + 25  # 转盘口径：不含手柄（后台概率列已剔手柄归一化）
     lollipop = next(p for p in state["prizes"] if p["id"] == "lollipop")
     assert abs(lollipop["probability"] - 50 / total_w) < 1e-3
     client.put("/api/admin/dynamic", json={"enabled": True, "mode": "per_win"}, headers=TOKEN)
@@ -182,7 +182,10 @@ def test_history_and_reset():
 
 
 def test_concurrent_no_oversell():
-    """并发压力：唯一大奖库存 1，把它的权重拉满后 50 人同时抢，绝不能发出 2 件。"""
+    """并发压力：唯一大奖库存 1，把它的权重拉满后 50 人经老虎机同时抢，绝不能发出 2 件。
+
+    老虎机奖池只留手柄（其余权重 0、钻石权重 0）→ 每次转出三手柄 = 手柄 ×1。
+    """
     all_ids = [p["id"] for p in client.get("/api/prizes").json()["prizes"]]
     zero = {pid: 0 for pid in all_ids if pid != GAMESIR}
     r = client.put(
@@ -190,26 +193,31 @@ def test_concurrent_no_oversell():
         headers=TOKEN,
     )
     assert r.status_code == 200
+    client.put("/api/admin/slot", json={"diamond_weight": 0, "gamesir_enabled": True}, headers=TOKEN)
     client.put("/api/admin/stock", json={"id": GAMESIR, "remaining": 1, "total": 1}, headers=TOKEN)
     client.post("/api/admin/history/reset", headers=TOKEN)
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=16) as pool:
-        results = list(pool.map(lambda _: client.post("/api/draw").json(), range(50)))
+        results = list(
+            pool.map(lambda _: client.post("/api/draw", json={"game": "slot"}).json(), range(50))
+        )
 
     wins = [r for r in results if r["result"] == "prize" and r["prize"]["id"] == GAMESIR]
     assert len(wins) == 1
     assert wins[0]["prize"]["remaining"] == 0
+    assert wins[0]["symbols"] == [GAMESIR, GAMESIR, GAMESIR]
     prizes_state = {p["id"]: p["remaining"] for p in client.get("/api/prizes").json()["prizes"]}
     assert prizes_state[GAMESIR] == 0
 
-    # 抽空后概率全部让给谢谢参与：再抽必然谢谢
-    assert client.post("/api/draw").json()["result"] == "thanks"
+    # 抽空后奖池清空：再抽必然谢谢
+    assert client.post("/api/draw", json={"game": "slot"}).json()["result"] == "thanks"
 
-    # 还原默认权重与库存
-    default = {"lollipop": 30, "nailong": 20, "notebook": 15, "bookmark": 10,
-               "shark": 8, "crawlpet": 6, GAMESIR: 2}
+    # 还原默认权重、库存与老虎机配置
+    default = {"lollipop": 30, "nailong": 20, "notebook": 15, "nfccard": 12,
+               "bookmark": 10, "shark": 8, "crawlpet": 6, GAMESIR: 2}
     client.put("/api/admin/weights", json={"weights": default, "thanks_weight": 9}, headers=TOKEN)
     client.put("/api/admin/stock", json={"id": GAMESIR, "remaining": 1, "total": 1}, headers=TOKEN)
+    client.put("/api/admin/slot", json={"diamond_weight": 10}, headers=TOKEN)
 
 
 def test_replenish_all():
