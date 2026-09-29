@@ -79,7 +79,7 @@ button { font-family: inherit; }
 
 .layout {
   position: relative; z-index: 1;
-  max-width: 1120px;
+  max-width: 1400px;
   margin: 0 auto;
   /* flex:1 吃掉顶栏以下的全部视口高度，舞台随之铺满（body 为纵向 flex） */
   flex: 1;
@@ -234,9 +234,10 @@ button { font-family: inherit; }
 
 .wheel-wrap {
   position: relative;
-  /* px 上限 680→780；vh 因子 76→77（与顶栏/布局的弹性一屏预算配套，
-     舞台高度 = 视口 - 顶栏，77vh 上限保证盘体+竖排提示不溢出） */
-  width: min(780px, 94vw, 77vh);
+  /* px 上限 780→860；vh 因子 77→78：78vh 下指针顶部（top:-34px）在
+     vh≈641 以上不被舞台 overflow:hidden 裁剪（640/650/680 等分屏高度安全）；
+     盘体放大同时扇区文字系数同步上调 */
+  width: min(860px, 94vw, 78vh);
   aspect-ratio: 1;
   margin: 0 auto;
 }
@@ -278,9 +279,10 @@ button { font-family: inherit; }
   position: absolute; left: 50%; top: 50%;
   transform: translate(-50%, -50%);
   z-index: 4;
-  /* 随盘缩放（18% ≈ 满尺寸 140px）：小视口 77vh 压盘时中心钮跟着缩，
-     名字带内端才不会探进钮下（r_names ≈ 0.1135×size 恒小于 0.09×size 不成立时以缩放兜住） */
-  width: 18%; height: 18%;
+  /* 随盘缩放（16% ≈ 满尺寸 138px@860）：小视口 78vh 压盘时中心钮跟着缩。
+     名字带内端 = 0.2275×size − 3×0.043×size ≈ 0.0985×size，钮半径 0.08×size，
+     余量 ≈ 0.0185×size（约 16px@860），首字不探进钮下 */
+  width: 16%; height: 16%;
   border-radius: 50%;
   border: 4px solid var(--hub-ring, rgba(255,255,255,.75));
   background: var(--btn-bg);
@@ -318,12 +320,14 @@ button { font-family: inherit; }
 /* ---------- 形式五：老虎机 ---------- */
 
 .slot-box { display: grid; justify-items: center; position: relative; }
-/* 机身宽（860px），舞台（.layout 限宽 1120）左侧留白放不下竖排提示——
+/* 机身宽（≤1160px），舞台左侧留白放不下竖排提示——
    提示改锚定在机身上：立于机身左侧留白内、与之保持间距，任何窗口宽度不相交。
    只改水平偏移；≤1150px 媒体查询的横排回退（position:static）不受影响 */
 .slot-box .stage-hint { left: auto; right: calc(100% + 14px); }
 .slot-machine {
-  width: min(860px, 94vw);
+  /* 268px = 左右各留 66px 竖排提示带（提示宽 ~52 + 间距 14）+ 舞台内边距；
+     ≤1150px 提示转横排随流，无此约束回到 94vw */
+  width: min(1160px, 94vw, calc(100vw - 268px));
   border-radius: var(--radius-lg);
   background: var(--surface);
   border: 1px solid var(--line-strong);
@@ -335,12 +339,12 @@ button { font-family: inherit; }
   display: inline-block;
   font-family: var(--font-display);
   font-weight: 900;
-  font-size: clamp(16px, 2.2vw, 20px);
+  font-size: clamp(18px, 2.4vw, 24px);
   letter-spacing: .32em; text-indent: .32em;
   color: var(--btn-ink);
   background: var(--btn-bg);
   border-radius: var(--radius-btn);
-  padding: 8px 26px;
+  padding: 10px 34px;
   box-shadow: var(--btn-shadow);
   margin-bottom: 22px;
 }
@@ -362,7 +366,7 @@ button { font-family: inherit; }
   position: relative;
 }
 .slot-window {
-  height: 152px;
+  height: clamp(168px, 20vh, 224px);
   overflow: hidden;
   border-radius: var(--radius);
   border: 2px solid var(--line-strong);
@@ -372,11 +376,11 @@ button { font-family: inherit; }
 .slot-reel { will-change: transform; }
 .slot-window.is-spinning .slot-reel { filter: blur(2px); }
 .slot-cell {
-  height: 152px;
+  height: clamp(168px, 20vh, 224px);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
 }
-.slot-cell .sc-emoji { font-size: 50px; line-height: 1.1; }
-.slot-cell .sc-name { font-size: 14px; font-weight: 700; color: var(--ink); }
+.slot-cell .sc-emoji { font-size: 58px; line-height: 1.1; }
+.slot-cell .sc-name { font-size: 16px; font-weight: 700; color: var(--ink); }
 .slot-window.is-set { border-color: var(--accent); box-shadow: 0 0 20px color-mix(in srgb, var(--accent) 55%, transparent); animation: winner-pulse 1s ease 2; }
 .slot-payline {
   position: absolute; left: -8px; right: -8px; top: 50%;
@@ -392,15 +396,15 @@ button { font-family: inherit; }
 /* 拉杆 */
 .slot-lever {
   flex: none;
-  width: 62px;
-  height: 268px;
+  width: 70px;
+  height: 300px;
   position: relative;
   cursor: pointer;
   touch-action: manipulation;
 }
 .slot-lever:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; border-radius: 12px; }
 .lever-slot {
-  position: absolute; left: 50%; top: 46px; bottom: 26px;
+  position: absolute; left: 50%; top: 50px; bottom: 28px;
   width: 14px; transform: translateX(-50%);
   border-radius: 8px;
   background: var(--row-bg);
@@ -408,19 +412,19 @@ button { font-family: inherit; }
   box-shadow: inset 0 3px 8px rgba(0,0,0,.35);
 }
 .lever-arm {
-  position: absolute; left: 50%; bottom: 30px;
-  width: 0; height: 190px;
+  position: absolute; left: 50%; bottom: 32px;
+  width: 0; height: 214px;
   transform-origin: 50% 100%;
 }
 .lever-stick {
   position: absolute; left: -6px; bottom: 0;
-  width: 12px; height: 150px;
+  width: 12px; height: 168px;
   border-radius: 6px;
   background: linear-gradient(90deg, #6d7078, #e8eaf0 42%, #9a9da6 70%, #5c5f66);
 }
 .lever-knob {
-  position: absolute; left: -22px; top: -34px;
-  width: 44px; height: 44px;
+  position: absolute; left: -24px; top: -36px;
+  width: 48px; height: 48px;
   border-radius: 50%;
   background: radial-gradient(circle at 32% 28%, var(--accent-2, #fff), var(--accent) 70%);
   box-shadow: inset -5px -8px 12px rgba(0,0,0,.3), 0 6px 14px rgba(0,0,0,.35);
@@ -493,6 +497,8 @@ button { font-family: inherit; }
     text-align: center;
     pointer-events: auto;
   }
+  /* 提示转横排后无需为竖排提示带预留宽度 */
+  .slot-machine { width: min(1160px, 94vw); }
 }
 
 /* ---------- 响应式 ---------- */

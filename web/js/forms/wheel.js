@@ -89,14 +89,14 @@ export function mount(stage, ctx) {
       c.rotate(mid);
       c.textAlign = "center";
       c.textBaseline = "middle";
-      // emoji 挂在外圈
-      c.font = `${Math.max(26, size * 0.078)}px sans-serif`;
-      c.fillText(item.emoji, r * 0.78, 0);
-      // 名称沿半径排布
+      // emoji 挂在外圈（0.81r：给 6 字名留出径向余量，字号微缩 0.075 控制占位）
+      c.font = `${Math.max(26, size * 0.075)}px sans-serif`;
+      c.fillText(item.emoji, r * 0.81, 0);
+      // 名称沿半径排布（系数 0.043：6 字名外端与 emoji 左缘余 ~3px、内端距中心钮 ~16px@860）
       c.fillStyle = isThanks ? pal.thanksInk : pal.ink;
-      c.font = `700 ${Math.max(15, size * 0.038)}px ${getComputedStyle(document.body).fontFamily}`;
+      c.font = `900 ${Math.max(17, size * 0.043)}px ${getComputedStyle(document.body).fontFamily}`;
       c.shadowColor = "rgba(0,0,0,.35)";
-      c.shadowBlur = 6;
+      c.shadowBlur = 8;
       const name = item.name.length > 6 ? item.name.slice(0, 6) : item.name;
       c.fillText(name, r * 0.455, 0);
       c.restore();
