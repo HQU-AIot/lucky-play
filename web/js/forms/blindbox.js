@@ -1,7 +1,7 @@
 /* 形式三：盲盒 v3（亮底 → 开始打乱 → 选盒开奖）。
    待选阶段 8 只盒子亮出奖品标签（奖品固定可见），点"开始打乱"的一瞬标签全部
-   翻面成"?"——打乱全程不显示内容，8 只盲盒两两换位 14 次（90→240ms 先密后疏、
-   弧线甩动轨迹）纯粹烘气氛；停下后盒子呼吸脉动邀请选盒，玩家任选一只的那一刻
+   翻面成"?"——打乱全程不显示内容，9 只盲盒换位 22 次（50→160ms 先密后疏、
+   弧线甩动、越到后程越常两对同换）纯粹烘气氛；停下后盒子呼吸脉动邀请选盒，玩家任选一只的那一刻
    才 ctx.draw() 起播音乐：上浮金环锁定 → 渐强摇晃 → 末段剧烈抖动 → 4.35s 开盖
    迸彩带 → 5s"停"整弹窗出场（RESULT_AT 兜底对齐）。弹窗关闭后其余盒按
    /api/sample 真实采样翻开，展示"如果选它们"的分布。 */
@@ -20,12 +20,14 @@ const POP_AT = LIFT_MS + SHAKE_MS + RATTLE_MS + SETTLE_MS; // ≈4350ms 开盖
 const LID_MS = 640;        // 盖子顶飞翻滚时长（纯视觉，与展示期重叠）
 const FLIP_MS = 250;       // 开始打乱时标签翻面成"?"的时长
 
-/* 打乱阶段：8 只全动，14 次两两交换，间隔 90→240ms 先密后疏；
-   移动走弧线（中点垂直偏移 + 轻旋），时长压在间隔以内 */
-const SWAPS = 14;
-const GAP_MIN = 90;
-const GAP_MAX = 240;
+/* 打乱阶段：9 只全动，22 次交换，间隔 50→160ms 先密后疏（更急更密）；
+   约三成拍点两对同时换（双线并换，乱上加乱）；移动走弧线（中点垂直偏移
+   幅度随机、轻旋随弧高抖动），时长压在间隔以内 */
+const SWAPS = 22;
+const GAP_MIN = 50;
+const GAP_MAX = 160;
 const MOVE_FACTOR = 0.9;   // 单次移动时长 = 间隔 × 0.9，连环交换才不跳变
+const DOUBLE_P = 0.3;      // 一拍同时换两对的基准概率（后程更高，见 shuffle）
 
 const REDUCED_SHUFFLE_MS = 300; // 减动效：象征性换位停顿
 const REDUCED_OPEN_MS = 400;    // 减动效：选中后短暂停顿即开盒
@@ -141,10 +143,11 @@ export function mount(stage, ctx) {
     const dy = to.y - from.y;
     const len = Math.hypot(dx, dy) || 1;
     const px = -dy / len, py = dx / len; // 垂直于连线方向
-    const lift = (Math.random() < 0.5 ? -1 : 1) * Math.min(34, len * 0.18);
+    // 弧高与倾角都随机：有的低平快滑、有的高高抛甩，两对同换时轨迹互不相同
+    const lift = (Math.random() < 0.5 ? -1 : 1) * Math.min(90, len * (0.10 + Math.random() * 0.16));
     const midAx = dx / 2 + px * lift;
     const midAy = dy / 2 + py * lift;
-    const tilt = lift > 0 ? 5 : -5;
+    const tilt = (lift > 0 ? 1 : -1) * (3 + Math.random() * 8);
     const opts = { duration: dur, easing: "cubic-bezier(.3,.7,.35,1)" };
     const animA = a.animate(
       [
@@ -172,18 +175,22 @@ export function mount(stage, ctx) {
     });
   }
 
-  /* 疯狂打乱：8 只全部参与，14 次两两交换（随机配对、可连续动同一只），
-     间隔 90→240ms 先密后疏，哒哒声随节奏渐强——内容全程隐藏，纯盲选仪式感 */
+  /* 疯狂打乱：9 只全部参与，22 次交换（随机配对、可连续动同一只），
+     间隔 50→160ms 先密后疏，哒哒声随节奏渐强；越到后程越常两对同时换
+     （双线并换）——内容全程隐藏，纯盲选仪式感 */
   async function shuffle(boxes) {
     for (let i = 0; i < SWAPS; i++) {
       if (dead) return; // 打乱中切玩法：立刻收声，别在新玩法上继续响
       const p = i / (SWAPS - 1);
       const gap = lerp(GAP_MIN, GAP_MAX, p);
-      const a = boxes[(Math.random() * boxes.length) | 0];
-      let b = a;
-      while (b === a) b = boxes[(Math.random() * boxes.length) | 0];
+      // 洗牌取序号，保证两对四只互不相同（同一只同时飞两条弧线会走样）
+      const order = boxes.map((_, k) => k).sort(() => Math.random() - 0.5);
+      const moves = [[boxes[order[0]], boxes[order[1]]]];
+      if (boxes.length >= 4 && Math.random() < DOUBLE_P * (0.5 + p * 0.5)) {
+        moves.push([boxes[order[2]], boxes[order[3]]]);
+      }
       ctx.fx.sound.tick(0.35 + p * 0.55);
-      await Promise.all([swapArc(a, b, gap * MOVE_FACTOR), sleep(gap)]);
+      await Promise.all([...moves.map(([a, b]) => swapArc(a, b, gap * MOVE_FACTOR)), sleep(gap)]);
     }
   }
 
