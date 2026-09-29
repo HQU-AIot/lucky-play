@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# 【已停用】2026-09-29 起云部署已关闭（服务 stop+disable、linger 已关），仅本地运行；
+# 本脚本保留备用：如需恢复线上，执行本脚本后再
+#   ssh jd_admin 'loginctl enable-linger admin && systemctl --user start lucky.service'
 # 一键部署/更新 lucky-play 到京东云服务器（ssh 别名 jd_admin，见 ~/.ssh/config）。
 # 用法: 在仓库根目录执行  bash scripts/deploy.sh
 # 说明: 远端以用户级 systemd 服务运行（lucky.service，端口 8666），

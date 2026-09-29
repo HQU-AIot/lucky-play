@@ -8,9 +8,9 @@
 
 ```bash
 uv sync                                   # 安装依赖（官方 PyPI：uv sync --no-config --default-index https://pypi.org/simple）
-uv run uvicorn app.main:app --port 8000   # 启动
-# 打开 http://127.0.0.1:8000        抽奖页
-# 打开 http://127.0.0.1:8000/admin  后台
+uv run uvicorn app.main:app --port 8666   # 启动
+# 打开 http://127.0.0.1:8666        抽奖页
+# 打开 http://127.0.0.1:8666/admin  后台
 ```
 
 测试：`uv run --no-config pytest -q`
@@ -66,27 +66,18 @@ uv run uvicorn app.main:app --port 8000   # 启动
 - 改奖品清单/默认权重：编辑 `app/store.py` 的 `DEFAULT_PRIZES` 后重启即自动补插新增奖品（幂等迁移，不动已调好的权重/库存；删除奖品需删库重建）。注意转盘/九宫格/盲盒按 **9 项**（8 奖品 + 谢谢参与）设计，超过 9 项时九宫格自动隐藏多余格、盲盒盒面只展示前 9 项；后台仅能改权重与库存。
 - 公网部署务必设置 `LUCKY_ADMIN_TOKEN` 环境变量替换默认令牌。
 
-### 部署到京东云（已部署：111.228.49.184:8666）
+### 云部署（已停用）
 
-服务器以 `admin` 用户的**用户级 systemd 服务**运行（`lucky.service`，无 sudo 依赖，`loginctl enable-linger` 已开、开机自启）：
+2026-09-29 起不再使用云服务器，仅本地运行。京东云上的服务已关闭：`lucky.service` 已 stop + disable、`loginctl disable-linger` 已关（不会开机自启），公网 8666 已不可达；服务器上的代码与数据库仍保留在 `/home/admin/lucky-play`，未删除。
 
-```bash
-bash scripts/deploy.sh              # 一键上传代码 + 同步依赖 + 重启服务（可重复执行）
-```
-
-服务器侧常用命令（`ssh jd_admin` 后）：
+如需恢复线上部署，`scripts/deploy.sh` 仍可用（SSH 别名 `jd_admin`）：
 
 ```bash
-systemctl --user status lucky.service      # 看状态
-journalctl --user -u lucky.service -f      # 跟日志
-systemctl --user restart lucky.service     # 重启
+bash scripts/deploy.sh                     # 上传代码 + 装依赖 + 重启服务（可重复执行）
+ssh jd_admin 'loginctl enable-linger admin && systemctl --user start lucky.service'
 ```
 
-注意：
-
-1. **公网访问需在京东云控制台安全组放行 TCP 8666**（服务器内 `curl 127.0.0.1:8666` 正常而外网不通即为此原因）。
-2. 公网环境建议改密码：编辑远端 `~/.config/systemd/user/lucky.service` 加一行 `Environment=LUCKY_ADMIN_TOKEN=强密码`，然后 `systemctl --user daemon-reload && systemctl --user restart lucky.service`（改后后台登录用新密码）。
-3. 服务器数据库是独立的（本地测试库不上传）；部署后进 `/admin` 核对权重/库存，活动前点"全部补货"。
+注意：公网访问需在京东云控制台安全组放行 TCP 8666；公网部署务必设置 `LUCKY_ADMIN_TOKEN` 替换默认令牌（服务器侧命令：`systemctl --user status/restart lucky.service`、`journalctl --user -u lucky.service -f`）；服务器数据库独立，恢复后先登 `/admin` 核对库存，活动前点"全部补货"。
 
 ## 测试
 
