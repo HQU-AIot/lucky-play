@@ -203,6 +203,27 @@ function init() {
   });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeOverlays();
+    // 空格键抽奖：弹窗开着 = 再抽一次，否则 = 当前玩法的开始键；连按空格即可连续抽
+    if (e.code !== "Space" || e.repeat || e.altKey || e.ctrlKey || e.metaKey) return;
+    if (e.defaultPrevented) return; // 拉杆等自带空格处理的部件已在 target 阶段接手，别叠加触发
+    if (!$("#overlay-theme").hidden || !$("#overlay-form").hidden) return; // 浮层打开时不抢空格
+    const mask = $("#reveal");
+    if (mask && !mask.hidden) {
+      e.preventDefault();
+      $("#reveal-again").click();
+      return;
+    }
+    const el = document.activeElement;
+    // 输入类不拦截；按钮聚焦时交给原生空格点击，避免双触发
+    if (el && ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(el.tagName)) return;
+    const start = [...$("#stage").querySelectorAll("button")].find(
+      (b) => !b.disabled && b.offsetParent !== null &&
+        ["wheel-hub", "g-start", "bb-start", "slot-btn"].some((c) => b.classList.contains(c))
+    );
+    if (start) {
+      e.preventDefault();
+      start.click();
+    }
   });
 
   const soundBtn = $("#btn-sound");
