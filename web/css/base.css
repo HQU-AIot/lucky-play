@@ -205,6 +205,84 @@ button { font-family: inherit; }
 .reveal-note { margin: 12px 0 22px; color: var(--ink-dim); font-size: 14px; line-height: 1.7; }
 .reveal-actions { display: flex; gap: 12px; justify-content: center; }
 
+/* ---------- 双钻自选框 + 结果方格 ---------- */
+
+.chooser-mask {
+  position: fixed; inset: 0; z-index: 55;
+  display: grid; place-items: center;
+  padding: 20px;
+  background: var(--mask);
+  backdrop-filter: blur(6px);
+  animation: fade-in .25s ease both;
+}
+.chooser-mask[hidden] { display: none; }
+.chooser-box {
+  width: min(720px, 94vw);
+  max-height: 88vh;
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--card-shadow);
+  padding: 24px clamp(18px, 3vw, 34px);
+  text-align: center;
+}
+.chooser-kicker {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-size: clamp(20px, 2.6vw, 27px);
+  font-weight: 900;
+}
+.chooser-sub { margin: 0 0 18px; font-size: 13px; color: var(--ink-dim); }
+.chooser-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.chooser-prize {
+  cursor: pointer;
+  display: grid; justify-items: center; gap: 6px;
+  padding: 16px 8px 13px;
+  border-radius: var(--radius);
+  border: 2px solid var(--line-strong);
+  background: var(--row-bg);
+  color: var(--ink);
+  transition: transform .15s cubic-bezier(.34, 1.56, .64, 1), border-color .15s ease, box-shadow .15s ease;
+}
+.chooser-prize:hover { transform: translateY(-3px); }
+.chooser-prize.is-picked {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent), 0 10px 22px rgba(0, 0, 0, .25);
+  transform: scale(1.05);
+}
+.chooser-prize .cp-emoji { font-size: 42px; line-height: 1.1; }
+.chooser-prize .cp-name { font-size: 14px; font-weight: 700; }
+.chooser-empty { margin: 10px 0 18px; color: var(--ink-dim); font-size: 15px; }
+.chooser-confirm {
+  font-size: clamp(18px, 2.2vw, 22px);
+  font-weight: 900;
+  letter-spacing: .14em; text-indent: .14em;
+  padding: 12px 46px;
+}
+.chooser-confirm:disabled { opacity: .45; cursor: not-allowed; filter: saturate(.4); }
+
+/* 结果弹窗的多奖品方格（超级大奖"全是你的"/三同手柄） */
+.reveal-grid {
+  display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+  margin: 12px 0 2px;
+}
+.reveal-grid[hidden] { display: none; }
+.rg-chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 13px;
+  border-radius: 999px;
+  background: var(--row-bg);
+  border: 1px solid var(--line-strong);
+}
+.rg-emoji { font-size: 22px; }
+.rg-name { font-size: 13px; font-weight: 700; }
+
 .btn-primary {
   appearance: none; cursor: pointer;
   border: none; color: var(--btn-ink);

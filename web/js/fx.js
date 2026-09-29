@@ -361,11 +361,24 @@ const reveal = {
       win ? (isJackpot ? "💎 超级大奖" : parts.length > 1 ? "🎉 多重中奖" : "🎉 恭喜中奖") : "谢谢参与";
     document.getElementById("reveal-emoji").textContent = win ? (isJackpot ? "💎" : parts[0].emoji) : "🙏";
     document.getElementById("reveal-name").textContent = win
-      ? (isJackpot ? "每一个品类都是你的！" : label)
+      ? (isJackpot ? "全是你的！" : parts.length > 1 ? label : parts[0].name)
       : "下次一定";
+    // 多奖品（超级大奖/三同手柄）：方格排列奖品，与双钻自选框同款视觉
+    const gridEl = document.getElementById("reveal-grid");
+    if (gridEl) {
+      if (win && parts.length > 1) {
+        gridEl.hidden = false;
+        gridEl.innerHTML = parts
+          .map((p) => `<span class="rg-chip"><span class="rg-emoji">${p.emoji}</span><span class="rg-name">${p.name}${p.n > 1 ? ` ×${p.n}` : ""}</span></span>`)
+          .join("");
+      } else {
+        gridEl.hidden = true;
+        gridEl.innerHTML = "";
+      }
+    }
     document.getElementById("reveal-note").textContent = win
       ? (isJackpot
-        ? `${parts.map((p) => `${p.emoji} ${p.name}${p.n > 1 ? ` ×${p.n}` : ""}`).join("、")}——全部收入囊中，找管理员一次性领取～`
+        ? "这些奖品全部归你，找管理员一次性领取～"
         : parts.length > 1
           ? `${label} 已收入囊中，记得找管理员领取～`
           : `好运直达！「${parts[0].name}」已收入囊中，记得找管理员领取～`)

@@ -6,8 +6,10 @@
 
 from __future__ import annotations
 
+import secrets
 import sqlite3
 import threading
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -48,6 +50,9 @@ class Store:
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._lock = threading.RLock()
+        # 双钻自选的一次性凭据 {token: 签发时刻}；确认/过期后移除。
+        # 单进程部署，内存即可——凭据丢失的最坏结果是这轮双钻作废，不涉库存。
+        self._pending: dict[str, float] = {}
         self._conn = sqlite3.connect(
             str(self.db_path), check_same_thread=False, isolation_level=None
         )
@@ -231,9 +236,10 @@ class Store:
         - 三同手柄 = 手柄 ×1 + 任选一件其它奖品（系统随机）；
         - 三同钻石 = 超级大奖：除手柄外每类奖品各 ×1（仅发仍有库存的类别），
           超级大奖开关关闭时该组合重抽；
-        - 两同钻石 = 任选一件非手柄奖品（系统随机，无库存可发时谢谢参与）；
+        - 两同钻石 = 中奖者现场自选：本事务只圈出可选清单（有库存的非手柄
+          奖品）并签发一次性凭据、零扣减零流水，等 choose_pending() 确认；
         - 两同手柄不可能中奖（手柄仅 1 件）→ 重抽。
-        所有"任选"都在事务内由系统随机决定并逐件写 draws 流水，库存可审计。
+        除双钻自选外，其余"任选"都在事务内由系统随机决定并逐件写流水。
         """
         from .lottery import DIAMOND, slot_outcome, slot_pool, slot_spin
 
@@ -255,6 +261,8 @@ class Store:
                 symbols: list[str] = []
                 wins: list[str] = []
                 result = "thanks"
+                pending_token: str | None = None
+                pending_choices: list[dict] | None = None
                 for _ in range(300):
                     if not pool:
                         break
@@ -264,15 +272,20 @@ class Store:
                         break
                     if kind == "pair":
                         if sym == DIAMOND:
-                            # 任选 = 有库存的非手柄奖品（与权重无关，保证"每个奖品都可能被选到"）
+                            # 双钻 = 中奖者现场自选：这里只圈出可选清单（有库存的
+                            # 非手柄奖品，与权重无关）并签发一次性凭据，等玩家在
+                            # 自选框里点「确认领取」时由 choose_pending() 扣库存
                             avail = [
                                 pid
                                 for pid, row in stock.items()
                                 if pid != "gamesir" and row["remaining"] > 0
                             ]
                             if avail:
-                                wins = [rng.choice(avail)]
-                                result = "prize"
+                                pending_token = secrets.token_urlsafe(16)
+                                pending_choices = [
+                                    {"id": pid, "name": stock[pid]["name"], "emoji": stock[pid]["emoji"]}
+                                    for pid in avail
+                                ]
                             break
                         if sym == "gamesir":
                             continue  # 手柄只有 1 件，两同手柄不构成奖项
@@ -306,6 +319,23 @@ class Store:
                     wins = [sym] * min(2, int(stock[sym]["remaining"]))
                     result = "prize"
                     break
+
+                if pending_token:
+                    # 双钻自选：本轮不扣库存不落流水，等确认（choose_pending）。
+                    # 顺带清理过期凭据（30 分钟未确认作废）
+                    now = time.monotonic()
+                    self._pending = {
+                        t: ts for t, ts in self._pending.items() if now - ts < 1800
+                    }
+                    self._pending[pending_token] = now
+                    self._conn.execute("COMMIT")
+                    return {
+                        "result": "choose",
+                        "symbols": symbols,
+                        "pending": pending_token,
+                        "choices": pending_choices,
+                        "game": "slot",
+                    }
 
                 granted = []
                 for pid in wins:
@@ -350,7 +380,67 @@ class Store:
                     self._conn.execute("ROLLBACK")
                 raise
 
-    # ---- 后台写入 ----
+    def choose_pending(self, token: str, prize_id: str | None) -> dict:
+        """双钻自选的确认端：凭据一次性，事务内扣库存、落流水。
+
+        prize_id 为 None（或玩家把可选奖品耗尽后点"收下谢谢参与"）= 记一条
+        谢谢参与。凭据无效/已用返回 error；选中的奖品若刚被并发抽走，返回
+        error 且凭据仍有效，玩家可换一件再确认——库存永远不会被扣成负数。
+        """
+        with self._lock:
+            self._conn.execute("BEGIN IMMEDIATE")
+            try:
+                now = time.monotonic()
+                self._pending = {
+                    t: ts for t, ts in self._pending.items() if now - ts < 1800
+                }
+                if token not in self._pending:
+                    self._conn.execute("COMMIT")
+                    return {"error": "这次选择已失效，请重新抽一次", "expired": True}
+                ts = datetime.now().astimezone().isoformat(timespec="seconds")
+                if prize_id is None:
+                    self._conn.execute(
+                        "INSERT INTO draws (ts, result, prize_id, prize_name) VALUES (?,?,?,?)",
+                        (ts, "thanks", None, None),
+                    )
+                    self._conn.execute("COMMIT")
+                    del self._pending[token]  # COMMIT 成功后才消费：异常路径下库存/流水/凭据始终一致
+                    return {"result": "thanks", "prize": None, "prizes": [], "game": "slot"}
+                row = self._conn.execute(
+                    "SELECT id, name, emoji, remaining, total_stock FROM prizes WHERE id = ?",
+                    (prize_id,),
+                ).fetchone()
+                if row is None or prize_id == "gamesir" or row["remaining"] <= 0:
+                    # 不消费凭据：玩家换一件仍可确认
+                    self._conn.execute("COMMIT")
+                    return {"error": "手慢了，这件奖品刚被抽走，换一件吧"}
+                self._conn.execute(
+                    "UPDATE prizes SET remaining = remaining - 1 WHERE id = ? AND remaining > 0",
+                    (prize_id,),
+                )
+                self._conn.execute(
+                    "INSERT INTO draws (ts, result, prize_id, prize_name) VALUES (?,?,?,?)",
+                    (ts, "prize", prize_id, row["name"]),
+                )
+                self._conn.execute("COMMIT")
+                del self._pending[token]  # COMMIT 成功后才消费（见上）
+                prize = {
+                    "id": prize_id,
+                    "name": row["name"],
+                    "emoji": row["emoji"],
+                    "remaining": int(row["remaining"]) - 1,
+                    "total": int(row["total_stock"]),
+                }
+                return {
+                    "result": "prize",
+                    "prize": prize,
+                    "prizes": [prize],
+                    "game": "slot",
+                }
+            except Exception:
+                if self._conn.in_transaction:
+                    self._conn.execute("ROLLBACK")
+                raise
 
     def set_config(self, updates: dict[str, str]) -> None:
         unknown = set(updates) - CONFIG_KEYS

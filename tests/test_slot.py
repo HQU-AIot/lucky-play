@@ -109,7 +109,9 @@ def test_pair_gamesir_never_wins():
     client.put("/api/admin/stock", json={"id": "crawlpet", "remaining": 50, "total": 50}, headers=TOKEN)
     for _ in range(120):
         r = _slot_draw()
-        granted_gamesir = [p for p in r["prizes"] if p["id"] == GAMESIR]
+        if r["result"] == "choose":
+            continue  # 双钻自选回执尚未发奖，无 prizes
+        granted_gamesir = [p for p in r.get("prizes", []) if p["id"] == GAMESIR]
         if granted_gamesir:
             # 手柄只能以"三同手柄"整套出现，且单次最多 1 件
             assert r["symbols"] == [GAMESIR] * 3
@@ -147,24 +149,85 @@ def test_jackpot_disabled_rerolls_three_diamonds():
     _restore()
 
 
-def test_pair_diamonds_grant_random_non_gamesir():
-    """两同钻石 = 任选一件非手柄奖品（全库存口径，与权重无关；此处断言永不选到手柄）。"""
-    client.put("/api/admin/weights", json={"weights": _weights_only({"lollipop": 1}), "thanks_weight": 0}, headers=TOKEN)
-    client.put("/api/admin/slot", json={"diamond_weight": 100, "jackpot_enabled": False}, headers=TOKEN)
-    seen_pair = False
-    for _ in range(150):
+def _draw_until_choose(limit: int = 100) -> dict:
+    """反复抽到出现双钻自选回执为止（池里棒棒糖+钻石各半时约 28% 出现率）。"""
+    for _ in range(limit):
         r = _slot_draw()
-        if sorted(r["symbols"]) == sorted([DIAMOND, DIAMOND, "lollipop"]):
-            seen_pair = True
-            assert len(r["prizes"]) == 1 and r["prizes"][0]["id"] != GAMESIR
-        elif r["symbols"] == [DIAMOND] * 3:
-            assert r["result"] == "thanks"  # 超级大奖已关
-        else:
-            # 轴面符号只会是棒棒糖/钻石：棒棒糖对子发棒棒糖
-            for p in r["prizes"]:
-                assert p["id"] == "lollipop"
-    assert seen_pair
+        if r["result"] == "choose":
+            return r
+    raise AssertionError(f"{limit} 抽内未出现双钻自选回执")
+
+
+def test_pair_diamonds_offers_choice_grid_excluding_zero_stock():
+    """双钻 = 弹自选清单：只含有库存的非手柄奖品（无库存绝不出现），签发一次性凭据。"""
+    client.put("/api/admin/weights", json={"weights": _weights_only({"lollipop": 50}), "thanks_weight": 0}, headers=TOKEN)
+    client.put("/api/admin/slot", json={"diamond_weight": 50, "jackpot_enabled": False}, headers=TOKEN)
+    # 清空 5 件奖品库存：它们不应出现在自选清单里
+    prizes_now = {p["id"]: p for p in client.get("/api/prizes").json()["prizes"]}
+    for pid in ("notebook", "nfccard", "bookmark", "shark", "crawlpet"):
+        client.put("/api/admin/stock", json={"id": pid, "remaining": 0, "total": prizes_now[pid]["total"]}, headers=TOKEN)
+    r = _draw_until_choose()
+    assert sum(1 for s in r["symbols"] if s == DIAMOND) == 2
+    ids = sorted(c["id"] for c in r["choices"])
+    assert ids == ["lollipop", "nailong"]  # 仅有库存者；手柄永远不在清单里
     _restore()
+
+
+def test_choose_confirm_grants_and_decrements():
+    """点「确认领取」那一刻才扣库存：选谁扣谁一件、落 prize 流水；凭据一次性。"""
+    client.put("/api/admin/weights", json={"weights": _weights_only({"lollipop": 50}), "thanks_weight": 0}, headers=TOKEN)
+    client.put("/api/admin/slot", json={"diamond_weight": 50, "jackpot_enabled": False}, headers=TOKEN)
+    r = _draw_until_choose()
+    before = {p["id"]: p["remaining"] for p in client.get("/api/prizes").json()["prizes"]}
+    res = client.post("/api/slot/choose", json={"token": r["pending"], "prize_id": "lollipop"})
+    assert res.status_code == 200
+    data = res.json()
+    assert data["result"] == "prize" and data["prize"]["id"] == "lollipop"
+    after = {p["id"]: p["remaining"] for p in client.get("/api/prizes").json()["prizes"]}
+    assert after["lollipop"] == before["lollipop"] - 1
+    history = client.get("/api/admin/history?limit=5", headers=TOKEN).json()["records"]
+    assert history[0]["result"] == "prize" and history[0]["prize_id"] == "lollipop"
+    # 凭据已消费：拿同一凭据再确认 → 拒绝（410 已失效）
+    again = client.post("/api/slot/choose", json={"token": r["pending"], "prize_id": "nailong"})
+    assert again.status_code == 410
+    _restore()
+
+
+def test_choose_rejects_out_of_stock_token_still_usable():
+    """确认的奖品若刚被并发抽走：拒绝、凭据仍有效，换一件即可成功。"""
+    client.put("/api/admin/weights", json={"weights": _weights_only({"lollipop": 50}), "thanks_weight": 0}, headers=TOKEN)
+    client.put("/api/admin/slot", json={"diamond_weight": 50, "jackpot_enabled": False}, headers=TOKEN)
+    r = _draw_until_choose()
+    total = next(p["total"] for p in client.get("/api/prizes").json()["prizes"] if p["id"] == "lollipop")
+    client.put("/api/admin/stock", json={"id": "lollipop", "remaining": 0, "total": total}, headers=TOKEN)
+    res = client.post("/api/slot/choose", json={"token": r["pending"], "prize_id": "lollipop"})
+    assert res.status_code == 409
+    # 换清单里另一件（nailong 有库存）→ 成功
+    res2 = client.post("/api/slot/choose", json={"token": r["pending"], "prize_id": "nailong"})
+    assert res2.status_code == 200 and res2.json()["prize"]["id"] == "nailong"
+    _restore()
+
+
+def test_choose_null_grants_thanks():
+    """放弃选择（prize_id=None）：落一条谢谢参与流水。"""
+    client.put("/api/admin/weights", json={"weights": _weights_only({"lollipop": 50}), "thanks_weight": 0}, headers=TOKEN)
+    client.put("/api/admin/slot", json={"diamond_weight": 50, "jackpot_enabled": False}, headers=TOKEN)
+    r = _draw_until_choose()
+    client.post("/api/admin/history/reset", headers=TOKEN)
+    res = client.post("/api/slot/choose", json={"token": r["pending"], "prize_id": None})
+    assert res.status_code == 200 and res.json()["result"] == "thanks"
+    history = client.get("/api/admin/history?limit=5", headers=TOKEN).json()["records"]
+    assert history[0]["result"] == "thanks"
+    _restore()
+
+
+def test_choose_invalid_token_rejected():
+    """伪造/过期凭据一律拒绝（410），且不碰库存。"""
+    before = {p["id"]: p["remaining"] for p in client.get("/api/prizes").json()["prizes"]}
+    res = client.post("/api/slot/choose", json={"token": "bogus-token-abcdef", "prize_id": "lollipop"})
+    assert res.status_code == 410
+    after = {p["id"]: p["remaining"] for p in client.get("/api/prizes").json()["prizes"]}
+    assert after == before
 
 
 def test_pair_normal_prize_grants_exactly_one():

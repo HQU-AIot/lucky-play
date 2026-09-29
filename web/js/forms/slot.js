@@ -3,11 +3,13 @@
    对对碰规则（服务端定结果，前端只负责演）：
    三轴全不同 = 没抽到；两同 = 该奖品 ×1；三同 = 该奖品 ×2；
    三同手柄 = 手柄 + 任选奖品；三同钻石 💎 = 超级大奖（每类奖品各一）；
-   两同钻石 = 任选一件非手柄奖品。轴面图案 = 奖品 + 💎（代替谢谢参与）。
+   两同钻石 = 弹自选框让中奖者挑一件（点选→确认两步防误触，确认才扣库存）。
+   轴面图案 = 奖品 + 💎（代替谢谢参与）。
    时长对齐音乐：末轮停定回弹后在 RESULT_AT=5s"停"齐开奖。 */
 
 import { easeOutCubic, rand, sleep } from "../easing.js";
 import { RESULT_AT } from "../music.js?v=10";
+import { api } from "../api.js?v=10";
 
 const CELLS = 24;
 const CELL_FALLBACK_H = 150;
@@ -194,7 +196,7 @@ export function mount(stage, ctx) {
       counts[t.id] = (counts[t.id] || 0) + 1;
     });
     const winSym =
-      result.result === "prize"
+      result.result === "prize" || result.result === "choose"
         ? Object.keys(counts).find((k) => counts[k] >= 2)
         : null;
     windows.forEach((w, col) => {
@@ -222,6 +224,81 @@ export function mount(stage, ctx) {
     }
   }
 
+  /* 双钻自选框：点选奖品 → 确认领取（两步防误触）；再点一下已选中的取消
+     （恢复未选择状态）。确认那一刻服务端事务才扣库存。库存耗尽的奖品
+     （被并发抽走）就地从格子里移除；全部耗尽则退化为"收下谢谢参与"。 */
+  function choosePrize(pending) {
+    return new Promise((resolve) => {
+      const overlay = document.getElementById("chooser");
+      const grid = overlay.querySelector(".chooser-grid");
+      const confirmBtn = overlay.querySelector(".chooser-confirm");
+      let selected = null;
+      let exhausted = false;
+      const cards = new Map();
+
+      grid.innerHTML = "";
+      for (const c of pending.choices) {
+        const card = document.createElement("button");
+        card.type = "button";
+        card.className = "chooser-prize";
+        card.innerHTML = `<span class="cp-emoji">${c.emoji}</span><span class="cp-name">${c.name}</span>`;
+        card.addEventListener("click", () => {
+          ctx.fx.sound.click();
+          if (selected === c.id) {
+            selected = null;
+            card.classList.remove("is-picked");
+          } else {
+            selected = c.id;
+            cards.forEach((el) => el.classList.remove("is-picked"));
+            card.classList.add("is-picked");
+          }
+          confirmBtn.disabled = !selected;
+        });
+        cards.set(c.id, card);
+        grid.appendChild(card);
+      }
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = "确认领取";
+      overlay.hidden = false;
+
+      confirmBtn.onclick = async () => {
+        if (confirmBtn.disabled) return;
+        confirmBtn.disabled = true;
+        const chosen = exhausted ? null : selected; // 快照：fetch 往返内再点别的不影响本次确认
+        try {
+          const res = await api.choose(pending.pending, chosen);
+          if (res.error) {
+            ctx.fx.toast(res.error);
+            if (res.status === 410) {
+              // 凭据失效无法补救：按谢谢参与收场，流程继续
+              overlay.hidden = true;
+              resolve({ result: "thanks", prize: null, game: "slot" });
+              return;
+            }
+            if (chosen) {
+              cards.get(chosen)?.remove();
+              cards.delete(chosen);
+              if (selected === chosen) selected = null;
+            }
+            if (!cards.size) {
+              exhausted = true;
+              grid.innerHTML = `<p class="chooser-empty">奖品都被抽完啦，收下谢谢参与吧</p>`;
+              confirmBtn.textContent = "收下谢谢参与";
+            }
+            confirmBtn.disabled = false;
+            return;
+          }
+          ctx.fx.sound.pop();
+          overlay.hidden = true;
+          resolve(res);
+        } catch {
+          ctx.fx.toast("网络开小差了，再试一次");
+          confirmBtn.disabled = false;
+        }
+      };
+    });
+  }
+
   async function start() {
     if (running) return;
     ctx.fx.sound.click();
@@ -230,10 +307,12 @@ export function mount(stage, ctx) {
     running = true;
     try {
       await spin(result);
+      // 双钻：弹自选框，点选+确认后才算中奖（确认时刻服务端扣库存）
+      const final = result.result === "choose" ? await choosePrize(result) : result;
       // 弹窗在此出场（reveal 内部时机不变，RESULT_AT 对齐不受影响）；
       // 演出视觉（is-party/is-jackpot/落点格）保留整个弹窗期间，
       // 待弹窗关闭后（或异常中断时）由 finally 统一复原
-      const choice = await ctx.reveal(result);
+      const choice = await ctx.reveal(final);
       ctx.refresh();
       if (choice === "again") setTimeout(() => btn.click(), 200);
     } finally {

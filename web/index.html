@@ -57,11 +57,22 @@
       <span class="reveal-emoji" id="reveal-emoji"></span>
       <h2 class="reveal-name" id="reveal-name"></h2>
     </div>
+    <div class="reveal-grid" id="reveal-grid" hidden></div>
     <p class="reveal-note" id="reveal-note"></p>
     <div class="reveal-actions">
       <button class="btn-primary" id="reveal-again">再抽一次</button>
       <button class="btn-ghost" id="reveal-close">收下好礼</button>
     </div>
+  </div>
+</div>
+
+<!-- 双钻自选框：点选奖品 → 确认领取（两步防误触）；确认那一刻服务端才扣库存 -->
+<div class="chooser-mask" id="chooser" hidden>
+  <div class="chooser-box" role="dialog" aria-modal="true" aria-label="任选一件奖品">
+    <p class="chooser-kicker">💎 双钻石！奖品任你挑一件</p>
+    <p class="chooser-sub">下面的奖品都有现货（盖世小鸡手柄除外）——点一下选中，再点「确认领取」；点错了把已选的再点一下就取消</p>
+    <div class="chooser-grid"></div>
+    <button class="btn-primary chooser-confirm" type="button" disabled>确认领取</button>
   </div>
 </div>
 

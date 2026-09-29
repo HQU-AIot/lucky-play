@@ -218,6 +218,23 @@ def sample_results(count: int = Query(default=7, ge=1, le=20)):
     return {"samples": samples}
 
 
+class ChooseIn(BaseModel):
+    """双钻自选确认：token 来自 /api/draw(slot) 的 choose 回执，一次性。"""
+
+    token: str = Field(min_length=10, max_length=128)
+    prize_id: str | None = Field(default=None, max_length=64)
+
+
+@app.post("/api/slot/choose")
+def slot_choose(payload: ChooseIn):
+    """双钻自选确认：此刻才真正扣库存、写抽奖记录。"""
+    outcome = store.choose_pending(payload.token, payload.prize_id)
+    if "error" in outcome:
+        # 410 = 凭据失效（无法补救，前端按谢谢参与收场）；409 = 奖品刚被抽走（可换一件）
+        raise HTTPException(status_code=410 if outcome.get("expired") else 409, detail=outcome["error"])
+    return outcome
+
+
 # ---- 后台接口 ----
 
 
