@@ -425,7 +425,11 @@ button { font-family: inherit; }
 
 /* ---------- 形式五：老虎机 ---------- */
 
-.slot-box { display: grid; justify-items: center; }
+.slot-box { display: grid; justify-items: center; position: relative; }
+/* 机身宽（860px），舞台（.layout 限宽 1120）左侧留白放不下竖排提示——
+   提示改锚定在机身上：立于机身左侧留白内、与之保持间距，任何窗口宽度不相交。
+   只改水平偏移；≤1150px 媒体查询的横排回退（position:static）不受影响 */
+.slot-box .stage-hint { left: auto; right: calc(100% + 14px); }
 .slot-machine {
   width: min(860px, 94vw);
   border-radius: var(--radius-lg);
