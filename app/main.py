@@ -96,8 +96,10 @@ def _safe_nonneg(raw, fallback: float) -> float:
 
 
 def _slot_pool_and_weights(dyn_enabled: bool, dyn_mode: str):
-    """老虎机共用的奖品有效权重表（与转盘同一套权重/动态转移口径）。"""
-    prize_eff, _ = effective_weights(store.specs(), _thanks_weight(), dyn_enabled, dyn_mode)
+    """老虎机奖品有效权重表（独立 slot_weight 口径，与转盘权重互不影响）。"""
+    prize_eff, _ = effective_weights(
+        store.specs(use_slot_weight=True), _thanks_weight(), dyn_enabled, dyn_mode
+    )
     return prize_eff
 
 
@@ -181,7 +183,7 @@ def draw(payload: DrawIn | None = None):
         slot = _slot_cfg()
         return store.draw_slot(
             rng,
-            prize_eff,
+            _slot_pool_and_weights(dyn_enabled, dyn_mode),
             slot["diamond_weight"],
             slot["gamesir_enabled"],
             slot["jackpot_enabled"],
@@ -244,6 +246,16 @@ def admin_state():
     specs = store.specs()
     tw = _thanks_weight()
     probs = probability_table(specs, tw, dyn_enabled, dyn_mode)
+    # 老虎机独立权重口径：单轴真实分布 = 该奖品权重占单轴池（奖品+钻石，
+    # 按开关剔手柄）份额——分母是钻石而非谢谢参与，与轴面真实概率一致
+    slot_specs = store.specs(use_slot_weight=True)
+    slot_eff, _ = effective_weights(slot_specs, tw, dyn_enabled, dyn_mode)
+    slot_pool_map = slot_pool(slot_eff, _slot_cfg()["diamond_weight"], _slot_cfg()["gamesir_enabled"])
+    slot_axis_total = sum(slot_pool_map.values())
+    slot_probs = {
+        pid: (slot_pool_map.get(pid, 0.0) / slot_axis_total if slot_axis_total else 0.0)
+        for pid in (p["id"] for p in store.list_prizes())
+    }
     # 动态转移量（权重口径）= 谢谢参与有效权重 - 基础权重，供后台解释概率来源
     _, thanks_eff = effective_weights(specs, tw, dyn_enabled, dyn_mode)
     # 后台"转盘概率"列按转盘真实口径展示：剔除手柄后重新归一化（转盘永远抽不到手柄）
@@ -259,9 +271,11 @@ def admin_state():
                 "name": p["name"],
                 "emoji": p["emoji"],
                 "base_weight": float(p["base_weight"]),
+                "slot_weight": float(p["slot_weight"]),
                 "total_stock": int(p["total_stock"]),
                 "remaining": int(p["remaining"]),
                 "probability": round(probs.get(p["id"], 0.0), 4),
+                "slot_probability": round(slot_probs.get(p["id"], 0.0), 4),
             }
             for p in store.list_prizes()
         ],
@@ -283,16 +297,17 @@ def admin_state():
 
 class WeightsIn(BaseModel):
     weights: dict[str, WeightValue] = Field(default_factory=dict)
+    slot_weights: dict[str, WeightValue] = Field(default_factory=dict)
     thanks_weight: float | None = Field(default=None, ge=0, le=100000, allow_inf_nan=False)
 
 
 @app.put("/api/admin/weights", dependencies=[Depends(admin_auth)])
 def admin_weights(payload: WeightsIn):
     known = {p["id"] for p in store.list_prizes()}
-    unknown = set(payload.weights) - known
+    unknown = (set(payload.weights) | set(payload.slot_weights)) - known
     if unknown:
         raise HTTPException(status_code=404, detail=f"未知奖品: {sorted(unknown)}")
-    store.set_weights(payload.weights, payload.thanks_weight)
+    store.set_weights(payload.weights, payload.thanks_weight, payload.slot_weights or None)
     return {"ok": True}
 
 

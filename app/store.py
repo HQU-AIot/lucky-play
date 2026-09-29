@@ -88,6 +88,14 @@ class Store:
                     )""",
                 ):
                     self._conn.execute(stmt)
+                # v2 迁移：老虎机独立权重列。老库回填为转盘权重（行为不变），
+                # 之后两套权重各自调节互不影响
+                prize_cols = {r["name"] for r in self._conn.execute("PRAGMA table_info(prizes)")}
+                if "slot_weight" not in prize_cols:
+                    self._conn.execute("ALTER TABLE prizes ADD COLUMN slot_weight REAL")
+                self._conn.execute(
+                    "UPDATE prizes SET slot_weight = base_weight WHERE slot_weight IS NULL"
+                )
                 # 播种 + 幂等迁移：空库按清单顺序全量播种；已有库只补默认清单里
                 # 新增的奖品，sort 追加到末尾顺延（不与已有项撞号，展示顺序稳定）。
                 # 已有奖品的权重/库存一概不动——现场调过的参数保持原样。
@@ -102,8 +110,8 @@ class Store:
                     next_sort += 1
                     self._conn.execute(
                         "INSERT INTO prizes (id, name, emoji, sort, base_weight,"
-                        " total_stock, remaining) VALUES (?,?,?,?,?,?,?)",
-                        (pid, name, emoji, sort, weight, stock, stock),
+                        " slot_weight, total_stock, remaining) VALUES (?,?,?,?,?,?,?,?)",
+                        (pid, name, emoji, sort, weight, weight, stock, stock),
                     )
                 for key, value in DEFAULT_CONFIG.items():
                     self._conn.execute(
@@ -129,12 +137,15 @@ class Store:
             rows = self._conn.execute("SELECT key, value FROM config").fetchall()
         return {r["key"]: r["value"] for r in rows}
 
-    def specs(self) -> list[PrizeSpec]:
+    def specs(self, use_slot_weight: bool = False) -> list[PrizeSpec]:
+        """奖品快照。use_slot_weight=True 时 base_weight 字段承载老虎机权重
+        （两套权重独立调节，转盘/老虎机各自计算有效概率）。"""
+        col = "slot_weight" if use_slot_weight else "base_weight"
         return [
             PrizeSpec(
                 id=p["id"],
                 name=p["name"],
-                base_weight=float(p["base_weight"]),
+                base_weight=float(p[col]),
                 total=int(p["total_stock"]),
                 remaining=int(p["remaining"]),
             )
@@ -453,13 +464,22 @@ class Store:
                 [(k, str(v)) for k, v in updates.items()],
             )
 
-    def set_weights(self, weights: dict[str, float], thanks_weight: float | None) -> None:
+    def set_weights(
+        self,
+        weights: dict[str, float],
+        thanks_weight: float | None,
+        slot_weights: dict[str, float] | None = None,
+    ) -> None:
         with self._lock:
             self._conn.execute("BEGIN IMMEDIATE")
             try:
                 for pid, w in weights.items():
                     self._conn.execute(
                         "UPDATE prizes SET base_weight = ? WHERE id = ?", (float(w), pid)
+                    )
+                for pid, w in (slot_weights or {}).items():
+                    self._conn.execute(
+                        "UPDATE prizes SET slot_weight = ? WHERE id = ?", (float(w), pid)
                     )
                 if thanks_weight is not None:
                     self._conn.execute(

@@ -189,7 +189,8 @@ def test_concurrent_no_oversell():
     all_ids = [p["id"] for p in client.get("/api/prizes").json()["prizes"]]
     zero = {pid: 0 for pid in all_ids if pid != GAMESIR}
     r = client.put(
-        "/api/admin/weights", json={"weights": {**zero, GAMESIR: 100}, "thanks_weight": 0},
+        "/api/admin/weights",
+        json={"weights": {**zero, GAMESIR: 100}, "slot_weights": {**zero, GAMESIR: 100}, "thanks_weight": 0},
         headers=TOKEN,
     )
     assert r.status_code == 200
@@ -215,7 +216,7 @@ def test_concurrent_no_oversell():
     # 还原默认权重、库存与老虎机配置
     default = {"lollipop": 30, "nailong": 20, "notebook": 15, "nfccard": 12,
                "bookmark": 10, "shark": 8, "crawlpet": 6, GAMESIR: 2}
-    client.put("/api/admin/weights", json={"weights": default, "thanks_weight": 9}, headers=TOKEN)
+    client.put("/api/admin/weights", json={"weights": default, "slot_weights": default, "thanks_weight": 9}, headers=TOKEN)
     client.put("/api/admin/stock", json={"id": GAMESIR, "remaining": 1, "total": 1}, headers=TOKEN)
     client.put("/api/admin/slot", json={"diamond_weight": 10}, headers=TOKEN)
 

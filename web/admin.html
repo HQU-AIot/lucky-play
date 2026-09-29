@@ -124,10 +124,10 @@
   </div>
 
   <div class="card">
-    <h2>🎁 奖品与库存 <span class="hint">转盘与老虎机共用这套权重；转盘永远抽不到手柄 · 库存改动即时生效</span></h2>
+    <h2>🎁 奖品与库存 <span class="hint">转盘 / 老虎机各自一套权重分别调节；转盘永远抽不到手柄 · 库存改动即时生效</span></h2>
     <table>
       <thead><tr>
-        <th>奖品</th><th>已抽出</th><th>基础权重</th><th>转盘概率</th><th>库存（剩余 / 总量）</th>
+        <th>奖品</th><th>已抽出</th><th>转盘权重</th><th>转盘概率</th><th>老虎机权重</th><th>老虎机概率</th><th>库存（剩余 / 总量）</th>
       </tr></thead>
       <tbody id="prize-rows"></tbody>
     </table>
@@ -194,16 +194,6 @@
     </div>
     <p class="note" id="dyn-explain"></p>
     <p class="readout" id="dyn-readout"></p>
-  </div>
-
-  <div class="card">
-    <h2>🎪 活动信息</h2>
-    <div class="row">
-      <div class="field"><label>活动名称</label><input id="ev-name"></div>
-      <div class="field"><label>开奖日期（国庆前夜填 2026-09-30）</label><input id="ev-date" placeholder="2026-09-30"></div>
-      <div class="field"><label>一句话副标</label><input id="ev-note"></div>
-      <button id="ev-save">保存</button><span class="msg" id="ev-msg"></span>
-    </div>
   </div>
 
   <div class="card">
@@ -276,13 +266,18 @@ function renderToggles(d) {
 function snapWeights() {
   const m = {};
   document.querySelectorAll(".w-in").forEach((el) => { m[el.dataset.id] = el.value; });
+  const sm = {};
+  document.querySelectorAll(".sw-in").forEach((el) => { sm[el.dataset.id] = el.value; });
   const tw = $("#tw-row");
-  return { m, tw: tw ? tw.value : null };
+  return { m, sm, tw: tw ? tw.value : null };
 }
 
 function restoreWeights(snap) {
   document.querySelectorAll(".w-in").forEach((el) => {
     if (el.dataset.id in snap.m) el.value = snap.m[el.dataset.id];
+  });
+  document.querySelectorAll(".sw-in").forEach((el) => {
+    if (el.dataset.id in (snap.sm || {})) el.value = snap.sm[el.dataset.id];
   });
   const tw = $("#tw-row");
   if (tw && snap.tw !== null) tw.value = snap.tw;
@@ -316,9 +311,6 @@ function renderOdds(d) {
 function renderState(d) {
   stateData = d;
   renderToggles(d);
-  $("#ev-name").value = d.event.name || "";
-  $("#ev-date").value = d.event.date || "";
-  $("#ev-note").value = d.event.note || "";
   $("#dyn-mode").value = d.dynamic_mode;
   $("#diamond-weight").value = d.slot.diamond_weight;
   $("#dyn-explain").textContent = MODE_TEXT[d.dynamic_mode] || "";
@@ -341,6 +333,10 @@ function renderState(d) {
       <td><div style="display:flex;align-items:center">
         <div class="prob-bar"><i style="width:${(p.probability * 100).toFixed(1)}%"></i></div>
         <span class="prob-val">${pct(p.probability, 1)}</span></div></td>
+      <td><input type="number" min="0" step="0.5" class="sw-in" data-id="${p.id}" value="${p.slot_weight}"></td>
+      <td><div style="display:flex;align-items:center">
+        <div class="prob-bar"><i style="width:${(p.slot_probability * 100).toFixed(1)}%"></i></div>
+        <span class="prob-val">${pct(p.slot_probability, 1)}</span></div></td>
       <td><div class="stock-ctl" data-id="${p.id}">
         <button type="button" class="st-btn" data-act="dec" title="剩余减一">−</button>
         <input type="number" min="0" step="1" class="stock-in st-remaining" value="${p.remaining}" title="剩余">
@@ -353,7 +349,7 @@ function renderState(d) {
   }
   const thanksTr = document.createElement("tr");
   thanksTr.innerHTML = `
-    <td>🙏 谢谢参与</td>
+    <td>🙏 谢谢参与（钻石代替其上老虎机轴）</td>
     <td class="drawn">${byPrize["thanks"] || 0}</td>
     <td><input type="number" min="0" step="0.5" id="tw-row" value="${d.thanks_weight}"></td>
     <td><div style="display:flex;align-items:center">
@@ -361,6 +357,7 @@ function renderState(d) {
       <span class="prob-val">${pct(d.thanks_probability, 1)}</span>
       ${bonusW > 0.0005 ? `<span class="prob-note" title="动态转移：奖品消耗的库存把权重让给了谢谢参与">含转移 +${bonusW.toFixed(2)} 权重</span>` : ""}
     </div></td>
+    <td colspan="2">—</td>
     <td>不限量</td>`;
   tbody.appendChild(thanksTr);
 
@@ -424,16 +421,6 @@ $("#refresh").addEventListener("click", async () => {
   b.disabled = false;
 });
 
-$("#ev-save").addEventListener("click", async () => {
-  try {
-    await req("/api/admin/event", { method: "PUT", body: JSON.stringify({
-      name: $("#ev-name").value, date: $("#ev-date").value, note: $("#ev-note").value,
-    })});
-    flash("#ev-msg", "已保存");
-    await loadAll();
-  } catch (e) { flash("#ev-msg", "失败：" + e.message, false); }
-});
-
 // ---- 动态转移：开关即时保存；转移方式 + 保存 按钮一并提交 ----
 async function saveDynamic(enabled, mode, msgId) {
   const snap = snapWeights();
@@ -494,11 +481,13 @@ $("#w-save").addEventListener("click", async () => {
   try {
     const weights = {};
     document.querySelectorAll(".w-in").forEach((el) => { weights[el.dataset.id] = Number(el.value) || 0; });
+    const slot_weights = {};
+    document.querySelectorAll(".sw-in").forEach((el) => { slot_weights[el.dataset.id] = Number(el.value) || 0; });
     const tw = $("#tw-row").value;
     await req("/api/admin/weights", { method: "PUT", body: JSON.stringify({
-      weights, thanks_weight: tw === "" ? null : Number(tw),
+      weights, slot_weights, thanks_weight: tw === "" ? null : Number(tw),
     })});
-    flash("#w-msg", "权重已生效（含谢谢参与权重）");
+    flash("#w-msg", "权重已生效（转盘/老虎机各自一套 + 谢谢参与）");
     await loadAll();
   } catch (e) { flash("#w-msg", "失败：" + e.message, false); }
 });

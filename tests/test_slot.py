@@ -18,6 +18,16 @@ def _weights_only(keep: dict[str, float]) -> dict[str, float]:
     return {pid: keep.get(pid, 0) for pid in ALL_IDS}
 
 
+def _rig_weights(keep: dict[str, float], thanks: float = 0):
+    """测试 rig：转盘与老虎机权重一起设为 keep（老虎机轴面读独立 slot_weight）。"""
+    w = _weights_only(keep)
+    return client.put(
+        "/api/admin/weights",
+        json={"weights": w, "slot_weights": w, "thanks_weight": thanks},
+        headers=TOKEN,
+    )
+
+
 def _slot_draw():
     r = client.post("/api/draw", json={"game": "slot"})
     assert r.status_code == 200
@@ -25,7 +35,7 @@ def _slot_draw():
 
 
 def _restore():
-    client.put("/api/admin/weights", json={"weights": DEFAULT_WEIGHTS, "thanks_weight": 9}, headers=TOKEN)
+    client.put("/api/admin/weights", json={"weights": DEFAULT_WEIGHTS, "slot_weights": DEFAULT_WEIGHTS, "thanks_weight": 9}, headers=TOKEN)
     client.put("/api/admin/slot", json={"diamond_weight": 10, "gamesir_enabled": True, "jackpot_enabled": True}, headers=TOKEN)
     client.post("/api/admin/replenish", headers=TOKEN)
 
@@ -53,7 +63,7 @@ def test_admin_slot_config_and_odds():
 
 def test_wheel_never_grants_gamesir():
     """转盘永远抽不到盖世小鸡手柄——即便它的权重拉满。"""
-    client.put("/api/admin/weights", json={"weights": _weights_only({GAMESIR: 100000}), "thanks_weight": 0}, headers=TOKEN)
+    _rig_weights({GAMESIR: 100000}, 0)
     client.put("/api/admin/slot", json={"diamond_weight": 0}, headers=TOKEN)
     for _ in range(80):
         r = client.post("/api/draw", json={"game": "wheel"}).json()
@@ -64,7 +74,7 @@ def test_wheel_never_grants_gamesir():
 
 def test_triple_normal_prize_grants_two_units():
     """三同普通奖品 = 该奖品 ×2；库存只剩 1 件时只发 1 件。"""
-    client.put("/api/admin/weights", json={"weights": _weights_only({"lollipop": 50}), "thanks_weight": 0}, headers=TOKEN)
+    _rig_weights({"lollipop": 50}, 0)
     client.put("/api/admin/slot", json={"diamond_weight": 0}, headers=TOKEN)
     r = _slot_draw()
     assert r["symbols"] == ["lollipop"] * 3
@@ -82,7 +92,7 @@ def test_triple_normal_prize_grants_two_units():
 
 def test_triple_gamesir_grants_gamesir_plus_random_other():
     """三同手柄 = 手柄 ×1 + 恰好一件其它奖品。"""
-    client.put("/api/admin/weights", json={"weights": _weights_only({GAMESIR: 50, "nailong": 30, "bookmark": 30}), "thanks_weight": 0}, headers=TOKEN)
+    _rig_weights({GAMESIR: 50, "nailong": 30, "bookmark": 30}, 0)
     client.put("/api/admin/slot", json={"diamond_weight": 0}, headers=TOKEN)
     before = {p["id"]: p["remaining"] for p in client.get("/api/prizes").json()["prizes"]}
     r = None
@@ -104,7 +114,7 @@ def test_triple_gamesir_grants_gamesir_plus_random_other():
 
 def test_pair_gamesir_never_wins():
     """两同手柄不构成奖项（手柄仅 1 件）：大量抽签下手柄要么不出现、要么三同整套。"""
-    client.put("/api/admin/weights", json={"weights": _weights_only({GAMESIR: 100, "crawlpet": 1}), "thanks_weight": 0}, headers=TOKEN)
+    _rig_weights({GAMESIR: 100, "crawlpet": 1}, 0)
     client.put("/api/admin/slot", json={"diamond_weight": 3}, headers=TOKEN)
     client.put("/api/admin/stock", json={"id": "crawlpet", "remaining": 50, "total": 50}, headers=TOKEN)
     for _ in range(120):
@@ -121,7 +131,7 @@ def test_pair_gamesir_never_wins():
 
 def test_jackpot_three_diamonds_one_of_each():
     """三同钻石 = 超级大奖：除手柄外每类有库存的奖品各 ×1（此处把爬宠清零验证"仅发有库存类别"）。"""
-    client.put("/api/admin/weights", json={"weights": _weights_only({}), "thanks_weight": 0}, headers=TOKEN)
+    _rig_weights({}, 0)
     client.put("/api/admin/slot", json={"diamond_weight": 50, "gamesir_enabled": True, "jackpot_enabled": True}, headers=TOKEN)
     client.put("/api/admin/stock", json={"id": "crawlpet", "remaining": 0, "total": 4}, headers=TOKEN)
     r = _slot_draw()
@@ -140,7 +150,7 @@ def test_jackpot_three_diamonds_one_of_each():
 
 def test_jackpot_disabled_rerolls_three_diamonds():
     """超级大奖关闭：三同钻石被重抽，只剩钻石的池子最终谢谢参与。"""
-    client.put("/api/admin/weights", json={"weights": _weights_only({}), "thanks_weight": 0}, headers=TOKEN)
+    _rig_weights({}, 0)
     client.put("/api/admin/slot", json={"diamond_weight": 50, "jackpot_enabled": False}, headers=TOKEN)
     for _ in range(5):
         r = _slot_draw()
@@ -160,7 +170,7 @@ def _draw_until_choose(limit: int = 100) -> dict:
 
 def test_pair_diamonds_offers_choice_grid_excluding_zero_stock():
     """双钻 = 弹自选清单：只含有库存的非手柄奖品（无库存绝不出现），签发一次性凭据。"""
-    client.put("/api/admin/weights", json={"weights": _weights_only({"lollipop": 50}), "thanks_weight": 0}, headers=TOKEN)
+    _rig_weights({"lollipop": 50}, 0)
     client.put("/api/admin/slot", json={"diamond_weight": 50, "jackpot_enabled": False}, headers=TOKEN)
     # 清空 5 件奖品库存：它们不应出现在自选清单里
     prizes_now = {p["id"]: p for p in client.get("/api/prizes").json()["prizes"]}
@@ -175,7 +185,7 @@ def test_pair_diamonds_offers_choice_grid_excluding_zero_stock():
 
 def test_choose_confirm_grants_and_decrements():
     """点「确认领取」那一刻才扣库存：选谁扣谁一件、落 prize 流水；凭据一次性。"""
-    client.put("/api/admin/weights", json={"weights": _weights_only({"lollipop": 50}), "thanks_weight": 0}, headers=TOKEN)
+    _rig_weights({"lollipop": 50}, 0)
     client.put("/api/admin/slot", json={"diamond_weight": 50, "jackpot_enabled": False}, headers=TOKEN)
     r = _draw_until_choose()
     before = {p["id"]: p["remaining"] for p in client.get("/api/prizes").json()["prizes"]}
@@ -195,7 +205,7 @@ def test_choose_confirm_grants_and_decrements():
 
 def test_choose_rejects_out_of_stock_token_still_usable():
     """确认的奖品若刚被并发抽走：拒绝、凭据仍有效，换一件即可成功。"""
-    client.put("/api/admin/weights", json={"weights": _weights_only({"lollipop": 50}), "thanks_weight": 0}, headers=TOKEN)
+    _rig_weights({"lollipop": 50}, 0)
     client.put("/api/admin/slot", json={"diamond_weight": 50, "jackpot_enabled": False}, headers=TOKEN)
     r = _draw_until_choose()
     total = next(p["total"] for p in client.get("/api/prizes").json()["prizes"] if p["id"] == "lollipop")
@@ -210,7 +220,7 @@ def test_choose_rejects_out_of_stock_token_still_usable():
 
 def test_choose_null_grants_thanks():
     """放弃选择（prize_id=None）：落一条谢谢参与流水。"""
-    client.put("/api/admin/weights", json={"weights": _weights_only({"lollipop": 50}), "thanks_weight": 0}, headers=TOKEN)
+    _rig_weights({"lollipop": 50}, 0)
     client.put("/api/admin/slot", json={"diamond_weight": 50, "jackpot_enabled": False}, headers=TOKEN)
     r = _draw_until_choose()
     client.post("/api/admin/history/reset", headers=TOKEN)
@@ -232,7 +242,7 @@ def test_choose_invalid_token_rejected():
 
 def test_pair_normal_prize_grants_exactly_one():
     """两同普通奖品 = 该奖品 ×1（不是 ×2）。池内两符号时高频出现对子。"""
-    client.put("/api/admin/weights", json={"weights": _weights_only({"lollipop": 50, "nailong": 50}), "thanks_weight": 0}, headers=TOKEN)
+    _rig_weights({"lollipop": 50, "nailong": 50}, 0)
     client.put("/api/admin/slot", json={"diamond_weight": 0}, headers=TOKEN)
     before = {p["id"]: p["remaining"] for p in client.get("/api/prizes").json()["prizes"]}
     seen_pair = False
@@ -258,7 +268,7 @@ def test_slot_probability_follows_admin_weights():
     big, small = 200, 200
     client.put("/api/admin/stock", json={"id": "lollipop", "remaining": big, "total": big}, headers=TOKEN)
     client.put("/api/admin/stock", json={"id": "nailong", "remaining": small, "total": small}, headers=TOKEN)
-    client.put("/api/admin/weights", json={"weights": _weights_only({"lollipop": 100, "nailong": 1}), "thanks_weight": 0}, headers=TOKEN)
+    _rig_weights({"lollipop": 100, "nailong": 1}, 0)
     client.put("/api/admin/slot", json={"diamond_weight": 0}, headers=TOKEN)
 
     def granted_units(pid):
@@ -271,7 +281,7 @@ def test_slot_probability_follows_admin_weights():
     assert lolly_first > dragon_first * 5
 
     # 反转权重：分布必须跟着反转
-    client.put("/api/admin/weights", json={"weights": _weights_only({"lollipop": 1, "nailong": 100}), "thanks_weight": 0}, headers=TOKEN)
+    _rig_weights({"lollipop": 1, "nailong": 100}, 0)
     granted = []
     for _ in range(60):
         granted += _slot_draw()["prizes"]
@@ -282,10 +292,33 @@ def test_slot_probability_follows_admin_weights():
 def test_slot_stock_never_negative():
     """并发老虎机抽奖不把任何奖品库存扣成负数。"""
     client.put("/api/admin/stock", json={"id": "crawlpet", "remaining": 3, "total": 4}, headers=TOKEN)
-    client.put("/api/admin/weights", json={"weights": _weights_only({"crawlpet": 100}), "thanks_weight": 0}, headers=TOKEN)
+    _rig_weights({"crawlpet": 100}, 0)
     client.put("/api/admin/slot", json={"diamond_weight": 0}, headers=TOKEN)
     with __import__("concurrent.futures", fromlist=["x"]).ThreadPoolExecutor(max_workers=8) as pool:
         list(pool.map(lambda _: client.post("/api/draw", json={"game": "slot"}).json(), range(24)))
     after = {p["id"]: p["remaining"] for p in client.get("/api/prizes").json()["prizes"]}
     assert after["crawlpet"] >= 0
+    _restore()
+
+
+def test_wheel_and_slot_weights_independent():
+    """两套权重独立：老虎机权重拉满棒棒糖、转盘权重拉满奶龙时互不串台。"""
+    client.put(
+        "/api/admin/weights",
+        json={"weights": _weights_only({"nailong": 100}), "slot_weights": _weights_only({"lollipop": 100}), "thanks_weight": 0},
+        headers=TOKEN,
+    )
+    client.put("/api/admin/slot", json={"diamond_weight": 0}, headers=TOKEN)
+    # 转盘 30 抽：只可能是奶龙（棒棒糖转盘权重为 0）
+    for _ in range(30):
+        r = client.post("/api/draw", json={"game": "wheel"}).json()
+        if r["result"] == "prize":
+            assert r["prize"]["id"] == "nailong"
+    # 老虎机 30 抽：三同/对子只可能是棒棒糖（奶龙 slot 权重为 0，不上轴）
+    for _ in range(30):
+        r = _slot_draw()
+        for p in r.get("prizes", []):
+            assert p["id"] == "lollipop"
+        if r.get("symbols"):
+            assert "nailong" not in r["symbols"]
     _restore()
