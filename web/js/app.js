@@ -218,7 +218,7 @@ function init() {
     if (el && ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(el.tagName)) return;
     const start = [...$("#stage").querySelectorAll("button")].find(
       (b) => !b.disabled && b.offsetParent !== null &&
-        ["wheel-hub", "g-start", "bb-start", "slot-btn"].some((c) => b.classList.contains(c))
+        ["wheel-hub", "slot-btn"].some((c) => b.classList.contains(c))
     );
     if (start) {
       e.preventDefault();

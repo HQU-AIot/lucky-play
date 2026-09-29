@@ -315,114 +315,6 @@ button { font-family: inherit; }
   border-right: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
-/* ---------- 形式二：九宫格 ---------- */
-
-.grid9-box { display: grid; justify-items: center; gap: 16px; }
-.grid9 {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
-  /* 3×3 全 9 格 + 下方开始按钮：64vh 上限保证网格+按钮在舞台内完整可见 */
-  width: min(600px, 92vw, 64vh);
-  aspect-ratio: 1;
-}
-.g-cell {
-  display: grid; place-items: center; gap: 4px;
-  border-radius: var(--radius);
-  background: var(--row-bg);
-  border: 1px solid var(--line-strong);
-  padding: 8px 4px;
-  text-align: center;
-  transition: box-shadow .3s ease, background-color .14s ease, border-color .14s ease,
-    transform .16s cubic-bezier(.34, 1.56, .64, 1);
-}
-/* 奖品数 <9 时 JS 用 hidden 属性隐藏多余格——作者样式会压掉 UA 的 [hidden] 规则，须显式声明 */
-.g-cell[hidden] { display: none; }
-.g-cell .g-emoji { font-size: clamp(24px, 5.5vw, 34px); }
-.g-cell .g-name { font-size: clamp(11px, 1.6vw, 13px); font-weight: 600; line-height: 1.25; }
-.g-cell.is-lit {
-  background: var(--btn-bg);
-  border-color: transparent;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent), 0 0 26px color-mix(in srgb, var(--accent) 60%, transparent);
-  transform: scale(1.07);
-}
-.g-cell.is-trail {
-  box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 32%, transparent);
-  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
-}
-.g-cell.is-lit .g-name { color: var(--btn-ink); }
-.g-cell.is-lit .g-emoji { animation: cell-bounce .5s ease; }
-.g-cell.is-winner { animation: winner-pulse 1s ease 2; border-color: var(--accent); }
-.g-start { margin-top: 2px; font-size: clamp(20px, 3vw, 26px); font-weight: 900; letter-spacing: .14em; text-indent: .14em; padding: 12px 44px; }
-
-/* ---------- 形式三：盲盒（造型规则供 blindbox.css 的 9 盒网格复用） ---------- */
-
-.box {
-  position: relative;
-  width: clamp(118px, 24vw, 166px);
-  aspect-ratio: 1 / 1.08;
-  cursor: pointer;
-  border: none; background: none; padding: 0;
-  transition: transform .2s ease, filter .25s ease, opacity .25s ease;
-}
-.box:hover:not(:disabled) { transform: translateY(-6px) rotate(-1.5deg); }
-.box:disabled { cursor: default; }
-.box.is-dim { opacity: .3; filter: grayscale(.7); transform: scale(.94); }
-.box-body {
-  position: absolute; inset: auto 0 0 0; height: 78%;
-  border-radius: 12px;
-  background: var(--box-body-bg, var(--accent));
-  box-shadow: inset 0 -10px 18px rgba(0,0,0,.22), inset 0 6px 10px rgba(255,255,255,.18), 0 12px 26px rgba(0,0,0,.3);
-}
-.box-body::before {
-  content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 18%;
-  transform: translateX(-50%);
-  background: var(--box-ribbon, var(--gold, #f5c451));
-  opacity: .9;
-}
-.box-lid {
-  position: absolute; left: -4%; right: -4%; top: 4%; height: 22%;
-  border-radius: 10px;
-  background: var(--box-body-bg, var(--accent));
-  box-shadow: inset 0 4px 8px rgba(255,255,255,.25), 0 6px 12px rgba(0,0,0,.25);
-  transition: transform .5s cubic-bezier(.34,1.2,.5,1), opacity .5s ease;
-  z-index: 2;
-}
-.box-lid::before {
-  content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 18%;
-  transform: translateX(-50%);
-  background: var(--box-ribbon, var(--gold, #f5c451));
-}
-.box .box-q {
-  position: absolute; inset: 0; z-index: 3;
-  display: grid; place-items: center;
-  font-size: clamp(30px, 7vw, 42px); font-weight: 900;
-  color: var(--box-ribbon, var(--gold, #f5c451));
-  font-family: var(--font-display);
-  text-shadow: 0 3px 6px rgba(0,0,0,.3);
-  transition: opacity .3s ease, transform .4s ease;
-}
-.box .box-prize {
-  position: absolute; left: 50%; bottom: 60%;
-  transform: translateX(-50%) scale(0);
-  z-index: 4;
-  display: grid; justify-items: center; gap: 4px;
-  pointer-events: none;
-}
-.box .box-prize .p-emoji { font-size: clamp(38px, 8vw, 54px); filter: drop-shadow(0 8px 14px rgba(0,0,0,.35)); }
-.box .box-prize .p-name {
-  white-space: nowrap;
-  font-size: 13px; font-weight: 800;
-  background: var(--surface); color: var(--ink);
-  border: 1px solid var(--line-strong);
-  padding: 3px 10px; border-radius: 999px;
-}
-.box.is-open { cursor: default; }
-.box.is-open .box-lid { transform: translateY(-56px) rotate(-24deg); opacity: 0; }
-.box.is-open .box-q { opacity: 0; transform: scale(.4); }
-.box.is-open .box-prize { animation: prize-pop .7s cubic-bezier(.34,1.56,.64,1) .15s both; }
-.box:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; border-radius: 14px; }
-
 /* ---------- 形式五：老虎机 ---------- */
 
 .slot-box { display: grid; justify-items: center; position: relative; }
@@ -583,15 +475,9 @@ button { font-family: inherit; }
   60%  { transform: translateX(-50%) scale(.9, 1.16); }
   100% { transform: translateX(-50%) scale(1, 1); }
 }
-@keyframes cell-bounce { 0% { transform: scale(1); } 45% { transform: scale(1.35); } 100% { transform: scale(1); } }
 @keyframes winner-pulse {
   0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
   50% { box-shadow: 0 0 0 10px color-mix(in srgb, var(--accent) 0%, transparent); }
-}
-@keyframes prize-pop {
-  from { transform: translateX(-50%) scale(0) rotate(-8deg); }
-  65% { transform: translateX(-50%) scale(1.18) rotate(3deg); }
-  to { transform: translateX(-50%) scale(1) rotate(0); }
 }
 
 /* 窄屏侧边放不下竖排：退回常规横排、回到游戏下方 */
@@ -625,7 +511,7 @@ button { font-family: inherit; }
     transform: none;
   }
   .stage-hint { margin-top: 14px; }
-  .wheel-box, .grid9-box { display: flex; flex-direction: column; align-items: center; }
+  .wheel-box { display: flex; flex-direction: column; align-items: center; }
 }
 
 /* ---------- 降低动态效果 ---------- */

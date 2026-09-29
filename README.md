@@ -1,6 +1,6 @@
 # Lucky Play · 多形式 × 多主题抽奖系统
 
-为 2026-09-30（国庆前一天）抽奖活动准备的可自托管抽奖站：4 种抽奖玩法 × 6 套视觉主题（含国庆主题），带概率后台、剩余奖品查询接口、谢谢参与动态概率转移。零外部资源（无 CDN/字体/图片素材），离线可用。
+为 2026-09-30（国庆前一天）抽奖活动准备的可自托管抽奖站：2 种抽奖玩法 × 6 套视觉主题（含国庆主题），带概率后台、剩余奖品查询接口、谢谢参与动态概率转移。零外部资源（无 CDN/字体/图片素材），离线可用。
 
 > 交接 / 发给别人：运行 `bash scripts/package.sh` 产出的干净压缩包直接可跑；接手须知见 `docs/HANDOVER.md`。
 
@@ -15,13 +15,11 @@ uv run uvicorn app.main:app --port 8666   # 启动
 
 测试：`uv run --no-config pytest -q`
 
-## 玩法（4 种）
+## 玩法（2 种）
 
 | 玩法 | 说明 |
 | --- | --- |
 | 🎡 大转盘 | Canvas 转盘：蓄力回拉 → 爆发 → 长减速 → 过冲回摆，指针逐格弹跳 + 合成 tick 声 |
-| 🧨 九宫格 | 灯圈 3 圈起步，步进间隔渐增，精准停格 + 脉冲 |
-| 🎁 盲盒 | 9 盒亮底 → 点"开始打乱"疯狂换位 → 停下凭记忆选盒 → 开出奖品 |
 | 🎰 老虎机 | 三滚轮错峰停定、滚动模糊，抽中最稀有奖品触发"超级大奖"金字演出 |
 
 所有玩法支持**空格键**开始；结果弹窗打开时空格 = "再抽一次"，可全程一键连抽。
@@ -30,7 +28,7 @@ uv run uvicorn app.main:app --port 8666   # 启动
 
 `festive 红金福运` / `national 国庆盛典（9·30 前夜专用：金星烟花 + 开奖倒计时）` / `neon 星空霓虹` / `macaron 云朵马卡龙` / `tech 未来科技` / `pixel 像素街机`
 
-任一玩法 × 任一主题自由组合（24 种），选择存 localStorage。设计细节见 `docs/DESIGN.md`。
+任一玩法 × 任一主题自由组合（12 种），选择存 localStorage。设计细节见 `docs/DESIGN.md`。
 
 ## 奖品（默认种子，后台可改）
 
@@ -44,7 +42,7 @@ uv run uvicorn app.main:app --port 8666   # 启动
 | --- | --- |
 | `GET /api/prizes` | **剩余奖品查询**：`{event, prizes:[{id,name,emoji,remaining,total}], total_remaining}` |
 | `POST /api/draw` | 抽奖，返回 `{result:"prize"\|"thanks", prize}`（服务端先定结果，前端动画精确到达） |
-| `GET /api/sample?count=7` | 按当前概率采样展示结果（无副作用、不扣库存），供盲盒旁位展示与概率验证 |
+| `GET /api/sample?count=7` | 按当前概率采样展示结果（无副作用、不扣库存），供概率验证脚本使用 |
 | `GET /api/meta` | 活动名 / 开奖日期 / 副标 |
 
 后台（请求头 `X-Admin-Token`；默认 `123456`，环境变量 `LUCKY_ADMIN_TOKEN` 覆盖）：
@@ -65,7 +63,7 @@ uv run uvicorn app.main:app --port 8666   # 启动
 ## 数据与部署
 
 - SQLite 单文件（`data/lucky.db`，环境变量 `LUCKY_DB` 覆盖），抽奖在 `BEGIN IMMEDIATE` 事务内扣库存，并发不超卖（有测试保障）。
-- 改奖品清单/默认权重：编辑 `app/store.py` 的 `DEFAULT_PRIZES` 后重启即自动补插新增奖品（幂等迁移，不动已调好的权重/库存；删除奖品需删库重建）。注意转盘/九宫格/盲盒按 **9 项**（8 奖品 + 谢谢参与）设计，超过 9 项时九宫格自动隐藏多余格、盲盒盒面只展示前 9 项；后台仅能改权重与库存。
+- 改奖品清单/默认权重：编辑 `app/store.py` 的 `DEFAULT_PRIZES` 后重启即自动补插新增奖品（幂等迁移，不动已调好的权重/库存；删除奖品需删库重建）。转盘/老虎机按奖品数自适应布局（当前 8 奖品 + 谢谢参与 = 9 项）；后台仅能改权重与库存。
 - 公网部署务必设置 `LUCKY_ADMIN_TOKEN` 环境变量替换默认令牌。
 
 ### 云部署（已停用）
@@ -85,4 +83,4 @@ ssh jd_admin 'loginctl enable-linger admin && systemctl --user start lucky.servi
 
 - `tests/test_lottery.py`：概率数学（动态转移、概率守恒、边界）。
 - `tests/test_api.py`：接口集成 + **并发不超卖**（16 线程抢 1 件大奖）。
-- 网页端：6 玩法 × 6 主题全组合过一遍真实浏览器测试。
+- 网页端：2 玩法 × 6 主题全组合过一遍真实浏览器测试。

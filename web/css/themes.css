@@ -37,8 +37,6 @@
   --wheel-ink: #FFF6E5;
   --wheel-thanks: rgba(0, 0, 0, .32);
   --wheel-border: rgba(255, 220, 160, .55);
-  --box-body-bg: #C22633;
-  --box-ribbon: #F5C451;
   --confetti: #F5C451, #E8434E, #FFF6E5, #D9A441, #FF8A80;
   --reveal-glow: 0 0 70px rgba(245, 196, 81, .22);
   --bg-deco-a: radial-gradient(160px 90px at 8% 4%, rgba(245,196,81,.22), transparent 70%),
@@ -83,8 +81,6 @@
   --wheel-ink: #FFF8E7;
   --wheel-thanks: rgba(0, 0, 0, .34);
   --wheel-border: rgba(255, 222, 0, .6);
-  --box-body-bg: #C8102E;
-  --box-ribbon: #FFDE00;
   --confetti: #FFDE00, #FFB800, #FFF8E7, #FF5A5F, #C8102E;
   --reveal-glow: 0 0 80px rgba(255, 222, 0, .3);
   --bg-deco-a:
@@ -129,8 +125,6 @@
   --wheel-ink: #EAF2FF;
   --wheel-thanks: rgba(0, 0, 0, .45);
   --wheel-border: rgba(34, 211, 238, .5);
-  --box-body-bg: #1B2A5E;
-  --box-ribbon: #FF3D8A;
   --confetti: #FF3D8A, #22D3EE, #A78BFA, #F4F7FF, #FFD166;
   --reveal-glow: 0 0 60px rgba(255, 61, 138, .25);
   --bg-deco-a:
@@ -172,8 +166,6 @@
   --wheel-ink: #6B5B70;
   --wheel-thanks: #E9E2EE;
   --wheel-border: #FFFFFF;
-  --box-body-bg: #FFA6C1;
-  --box-ribbon: #FFF3B0;
   --confetti: #FFA6C1, #A8D8EA, #FFE7A3, #B8E0C2, #D9C2F0;
   --reveal-glow: 0 0 60px rgba(255, 164, 197, .3);
   --bg-deco-a:
@@ -220,8 +212,6 @@
   --wheel-ink: #D8F3FF;
   --wheel-thanks: rgba(0, 0, 0, .48);
   --wheel-border: rgba(0, 229, 255, .45);
-  --box-body-bg: #0D3A5C;
-  --box-ribbon: #00E5FF;
   --confetti: #00E5FF, #1976FF, #8BE9FD, #FFC857, #FFFFFF;
   --reveal-glow: 0 0 60px rgba(0, 229, 255, .28);
   --bg-deco-a: repeating-linear-gradient(0deg, rgba(216,243,255,.022) 0 1px, transparent 1px 4px);
@@ -266,8 +256,6 @@
   --wheel-ink: #F4F4F4;
   --wheel-thanks: rgba(0, 0, 0, .5);
   --wheel-border: #FFEC27;
-  --box-body-bg: #FFA300;
-  --box-ribbon: #FFEC27;
   --confetti: #FF004D, #FFA300, #FFEC27, #00E436, #29ADFF, #F4F4F4;
   --reveal-glow: 8px 8px 0 rgba(0, 0, 0, .4);
   --bg-deco-a: repeating-linear-gradient(0deg, rgba(10, 10, 20, .16) 0 2px, transparent 2px 5px);
@@ -290,10 +278,6 @@
 [data-theme="pixel"] .stage { border-width: 3px; }
 [data-theme="pixel"] .tool-btn { box-shadow: 4px 4px 0 rgba(0,0,0,.35); }
 [data-theme="pixel"] .tool-btn:hover { transform: translate(-1px, -2px); box-shadow: 6px 6px 0 rgba(0,0,0,.35); }
-[data-theme="pixel"] .g-cell { border-width: 3px; }
-[data-theme="pixel"] .g-cell.is-lit { background: #FFEC27; border-color: #FFEC27; box-shadow: 0 0 0 3px rgba(255,236,39,.35); }
-[data-theme="pixel"] .g-cell.is-lit .g-name,
-[data-theme="pixel"] .g-cell.is-lit .g-emoji { color: #1A1C2C; }
 [data-theme="pixel"] .btn-primary { box-shadow: 0 5px 0 #A01035; border-radius: 0; }
 /* 转盘中心全主题保持圆形（像素风仅指针做像素化处理） */
 [data-theme="pixel"] .wheel-hub { border-width: 4px; }
@@ -315,9 +299,3 @@
 /* festive：指针金色点缀 */
 [data-theme="festive"] .wheel-pointer .ptr-knob { border-color: #F5C451; }
 [data-theme="festive"] .wheel-pointer .ptr-tip { border-top-color: #F5C451; }
-[data-theme="festive"] .g-cell.is-lit .g-name { color: #FFF6E5; }
-[data-theme="national"] .g-cell.is-lit .g-name { color: #5E0A16; }
-[data-theme="national"] .g-cell.is-lit .g-emoji { filter: none; }
-[data-theme="tech"] .g-cell.is-lit .g-name { color: #04121F; }
-[data-theme="neon"] .g-cell.is-lit .g-name { color: #FFFFFF; }
-[data-theme="macaron"] .g-cell.is-lit .g-name { color: #FFFFFF; }

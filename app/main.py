@@ -136,7 +136,7 @@ def draw():
 def sample_results(count: int = Query(default=7, ge=1, le=20)):
     """按当前有效概率独立采样展示结果（无副作用，不扣库存）。
 
-    供盲盒等形式的旁位展示与概率验证脚本使用：展示的是"如果抽它"的真实分布。
+    供概率验证脚本与运维抽查使用：展示的是"如果抽它"的真实分布。
     """
     from .lottery import pick_result
 
