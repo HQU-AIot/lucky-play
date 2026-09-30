@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIoT 国庆游园卡 · A4 一页 3 张（黑白打印）</title>
+<style>
+  /* ========= 全局：纯黑白，无图案，A4 竖版一页 3 张 ========= */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: #e8e8e8; }
+  body {
+    font-family: "Noto Sans CJK SC", "Source Han Sans SC", "Microsoft YaHei", sans-serif;
+    color: #000;
+  }
+
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto;
+    padding: 5mm 8mm;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 3.5mm;
+  }
+
+  /* ========= 单张游园卡：194mm × 93mm，虚线为裁切线 ========= */
+  .card {
+    width: 194mm;
+    height: 93mm;
+    border: 0.4mm dashed #000;
+    padding: 3.2mm 4.5mm;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+  }
+
+  /* ---- 头部 ---- */
+  .card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 0.5mm solid #000;
+    padding-bottom: 0.8mm;
+  }
+  .head-left { display: flex; align-items: center; gap: 2.5mm; }
+  .logo { width: 13.5mm; height: 13.5mm; filter: grayscale(100%); }
+  .card-title {
+    font-family: "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
+    font-weight: 900;
+    font-size: 17pt;
+    letter-spacing: 0.12em;
+  }
+  .head-meta { text-align: right; font-size: 6.8pt; line-height: 1.5; }
+  .head-meta .no { font-size: 8pt; font-weight: 700; letter-spacing: 0.05em; }
+
+  /* ---- 区块标题 ---- */
+  .sec-label {
+    font-size: 7pt;
+    font-weight: 900;
+    letter-spacing: 0.25em;
+    margin: 1.2mm 0 1mm;
+  }
+  .sec-label::before { content: "■"; font-size: 5.5pt; margin-right: 1.2mm; }
+
+  /* ---- 玩法规则 ---- */
+  .rules { font-size: 7.2pt; line-height: 1.6; }
+  .rules .row1 { display: flex; gap: 6mm; font-weight: 700; }
+  .rules .row2 { margin-top: 0.2mm; }
+  .rules b { font-weight: 900; }
+  .rules .hl { border-bottom: 0.35mm solid #000; font-weight: 900; }
+
+  /* ---- 集章区 ---- */
+  .stamps { display: flex; gap: 3mm; }
+  .stamp-box {
+    flex: 1;
+    height: 28mm;
+    border: 0.4mm solid #000;
+    display: flex;
+    flex-direction: column;
+  }
+  .stamp-box .name {
+    font-size: 7.8pt;
+    font-weight: 900;
+    text-align: center;
+    padding: 0.8mm 0 0.7mm;
+    border-bottom: 0.25mm solid #000;
+    letter-spacing: 0.06em;
+  }
+  .stamp-box .area {
+    flex: 1;
+    margin: 0.8mm;
+    border: 0.3mm dashed #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 5.5pt;
+    color: #555;
+    letter-spacing: 0.4em;
+  }
+
+  /* ---- 奖品一览 ---- */
+  .prize-chips { display: flex; flex-wrap: wrap; gap: 1.2mm 2mm; }
+  .chip {
+    border: 0.3mm solid #000;
+    padding: 0.9mm 2.2mm;
+    font-size: 7.2pt;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .chip .qty { font-weight: 400; font-size: 6.2pt; }
+  .chip.top { background: #000; color: #fff; }
+  .chip.top .qty { color: #fff; }
+  .prize-note { font-size: 6.2pt; color: #333; margin-top: 0.8mm; letter-spacing: 0.03em; }
+
+  /* ========= 打印 ========= */
+  @page { size: A4 portrait; margin: 0; }
+  @media print {
+    html, body { background: #fff; }
+    .page { width: auto; min-height: auto; padding: 5mm 8mm; margin: 0; gap: 3.5mm; }
+    .card { break-inside: avoid; }
+    .print-tip { display: none; }
+  }
+  .print-tip {
+    width: 194mm; margin: 4mm auto; font-size: 9pt; color: #444;
+    text-align: center; font-family: "Noto Sans CJK SC", sans-serif;
+  }
+</style>
+</head>
+<body>
+<div class="print-tip">
+  A4 竖版 · 一页 3 张 · 纯黑白 · 沿虚线裁切 —— 奖品与数量以系统后台实时库存为准，打印前可改本页文字
+</div>
+
+<template id="card-tpl">
+  <div class="card">
+    <!-- 头部 -->
+    <div class="card-head">
+      <div class="head-left">
+        <img class="logo" src="club-logo.png" alt="AIoT 创新协会">
+        <div class="card-title">AIoT 国庆游园卡</div>
+      </div>
+      <div class="head-meta">
+        2026.9.30 · 国庆前一天 · 好运相逢<br>
+        <span class="no">No. ____________</span>
+      </div>
+    </div>
+
+    <!-- 玩法规则 -->
+    <div class="sec-label">玩法规则</div>
+    <div class="rules">
+      <div class="row1">
+        <span>① 入场即送 <b>1 次抽奖机会</b></span>
+        <span>② 1 次机会 = 幸运转盘 <b>×1</b></span>
+        <span>③ 2 次机会 = 幸运老虎机 <b>×1</b></span>
+      </div>
+      <div class="row2">④ 老虎机<span class="hl">上限更高</span>：独占头奖「盖世小鸡手柄」；双钻 = 任选 1 份奖品（手柄除外）；三钻 = <b>超级大奖，全场奖品（手柄除外）各得 1 份</b></div>
+    </div>
+
+    <!-- 四大挑战 · 集章 -->
+    <div class="sec-label">四大挑战 · 通关盖章（现场工作人员执行）</div>
+    <div class="stamps">
+      <div class="stamp-box"><div class="name">智感拍秒</div><div class="area">盖章处</div></div>
+      <div class="stamp-box"><div class="name">STM32 点灯</div><div class="area">盖章处</div></div>
+      <div class="stamp-box"><div class="name">心率猜猜看</div><div class="area">盖章处</div></div>
+      <div class="stamp-box"><div class="name">跳一跳挑战</div><div class="area">盖章处</div></div>
+    </div>
+
+    <!-- 奖品一览 -->
+    <div class="sec-label">奖品一览</div>
+    <div class="prize-chips">
+      <span class="chip top">★ 头奖 盖世小鸡手柄 <span class="qty">×1 · 老虎机限定</span></span>
+      <span class="chip">电子爬宠 <span class="qty">×4</span></span>
+      <span class="chip">鲨鱼匕首 <span class="qty">×6</span></span>
+      <span class="chip">油画书签 <span class="qty">×8</span></span>
+      <span class="chip">NFC 纪念卡 <span class="qty">×10</span></span>
+      <span class="chip">口袋笔记本 <span class="qty">×18</span></span>
+      <span class="chip">奶龙手办 <span class="qty">×36</span></span>
+      <span class="chip">不二家棒棒糖 <span class="qty">×53</span></span>
+    </div>
+    <div class="prize-note">奖品数量有限，抽完即止；最终解释权归现场工作人员。</div>
+  </div>
+</template>
+
+<div class="page">
+  <!-- 三张卡由脚本克隆，内容只维护 template 一处 -->
+  <div class="card-slot"></div>
+  <div class="card-slot"></div>
+  <div class="card-slot"></div>
+</div>
+
+<script>
+  const tpl = document.getElementById("card-tpl");
+  document.querySelectorAll(".card-slot").forEach(slot => {
+    slot.replaceWith(tpl.content.cloneNode(true));
+  });
+</script>
+</body>
+</html>
