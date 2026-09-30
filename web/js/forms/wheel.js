@@ -9,7 +9,7 @@ import { RESULT_AT } from "../music.js?v=10";
 const TAU = Math.PI * 2;
 const WINDUP = 0.40;      // 蓄力时长 s
 const WINDUP_ANGLE = 0.26; // 回拉弧度 ≈ 15°
-const OVERSHOOT = 0.05;    // 过冲弧度 ≈ 2.9°
+const OVERSHOOT = 0.02;    // 过冲弧度 ≈ 1.1°（2026-09-30 按需求从 2.9° 调小）
 const SETTLE = 0.34;      // 过冲回摆时长 s
 
 export function mount(stage, ctx) {
