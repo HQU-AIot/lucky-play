@@ -73,19 +73,20 @@
   /* ── 头部：灯笼 + 烫金牌匾 ── */
   header { text-align: center; position: relative; padding-top: 2mm; }
   .lantern {
-    position: absolute; top: -6mm; width: 17mm; height: 14mm;
+    position: absolute; top: -7mm; width: 20mm; height: 16.5mm;
     background: radial-gradient(ellipse at 50% 42%, #ff7a72 0%, var(--red) 55%, #a8222e 100%);
     border-radius: 50% / 46%;
     box-shadow: inset 0 -2mm 3mm rgba(74, 12, 21, .55), 0 1.5mm 3mm rgba(0,0,0,.3);
   }
   .lantern::before, .lantern::after { content: ""; position: absolute; left: 50%; transform: translateX(-50%); }
-  .lantern::before { top: -2.4mm; width: 7mm; height: 2.2mm; background: linear-gradient(180deg, var(--gold), var(--gold-deep)); border-radius: 0.8mm; }
+  .lantern::before { top: -2.4mm; width: 8mm; height: 2.4mm; background: linear-gradient(180deg, var(--gold), var(--gold-deep)); border-radius: 0.8mm; }
   .lantern::after { bottom: -6.5mm; width: 1mm; height: 4.5mm; background: var(--gold); }
-  .lantern.l { left: 10mm; transform: rotate(-7deg); }
-  .lantern.r { right: 10mm; transform: rotate(7deg); }
+  .lantern.l { left: 9mm; transform: rotate(-7deg); }
+  .lantern.r { right: 9mm; transform: rotate(7deg); }
   .lantern small {
-    position: absolute; top: 3.6mm; left: 0; right: 0; text-align: center;
-    font-size: 7.5pt; font-weight: 700; color: var(--gold); text-shadow: 0 0.3mm 0.5mm rgba(74,12,21,.6);
+    position: absolute; top: 5.8mm; left: 0; right: 0; text-align: center;
+    font-size: 11pt; font-weight: 900; color: var(--paper);
+    text-shadow: 0 0.5mm 0.7mm rgba(58, 6, 12, .85);
   }
   .plaque {
     display: inline-block; padding: 5.5mm 13mm 6mm;
