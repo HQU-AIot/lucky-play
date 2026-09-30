@@ -467,6 +467,24 @@ button { font-family: inherit; }
 .slot-cell .sc-name { font-size: 16px; font-weight: 700; color: var(--ink); }
 /* 钻石符号（代替谢谢参与上轴；两钻=任选奖品、三钻=超级大奖） */
 .slot-cell .sc-diamond { color: #7dd3fc; text-shadow: 0 0 16px rgba(125, 211, 252, .6); }
+/* 停格显影：滚轮停定前后，落点图案经渐变蒙版自上而下"剪出"，配合模糊聚焦
+   落定，取代减速尾段空白后瞬间弹出的生硬观感（JS 在滚动 80% 进度时挂
+   .is-landing；首格与末尾复制格同步显影，见 slot.js 的 spin()） */
+.slot-cell.is-landing {
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 40%, transparent 58%);
+  mask-image: linear-gradient(180deg, #000 0%, #000 40%, transparent 58%);
+  -webkit-mask-size: 100% 250%;
+  mask-size: 100% 250%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  animation: cell-land .6s cubic-bezier(.3, .55, .25, 1) both;
+}
+@keyframes cell-land {
+  /* opacity 必须进关键帧：滚动前内联 opacity:0 藏格，动画 fill both 才能盖过它 */
+  from { opacity: 0; -webkit-mask-position: 0 100%; mask-position: 0 100%; filter: blur(7px); transform: scale(1.22); }
+  55%  { opacity: .85; filter: blur(2.5px); }
+  to   { opacity: 1; -webkit-mask-position: 0 0%; mask-position: 0 0%; filter: blur(0); transform: scale(1); }
+}
 .slot-window.is-dim { filter: saturate(.35) brightness(.7); }
 .slot-window.is-set { border-color: var(--accent); box-shadow: 0 0 20px color-mix(in srgb, var(--accent) 55%, transparent); animation: winner-pulse 1s ease 2; }
 .slot-payline {
