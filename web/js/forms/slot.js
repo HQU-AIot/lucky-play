@@ -13,7 +13,7 @@ import { api } from "../api.js?v=10";
 
 const CELLS = 24;
 const CELL_FALLBACK_H = 150;
-const LAND_AT = 0.8;      // 滚动进度到此即开始渐变显影落点图案
+const LAND_AT = 0.9;      // 滚动进度到此即触发停格"剪彩"高光（贴近停定时刻）
 const LAST_DELAY = 520;   // 末轮启动延迟 ms
 const LAST_SPIN = 3900;   // 末轮滚动时长 ms（名义值，±50 抖动）
 const BOUNCE_MS = 240;    // 停定回弹 ms
@@ -83,10 +83,13 @@ export function mount(stage, ctx) {
   function spinReel(reel, laps, duration, tick) {
     return new Promise((resolve) => {
       const cellH = reel.children[0]?.getBoundingClientRect().height || CELL_FALLBACK_H;
-      const cells = reel.children.length;
-      const loopLen = cells * cellH;
-      const total = (laps * cells + cells) * cellH; // 逻辑滚动量；视觉位置对 loopLen 取模循环
-      // 落点格与其末尾复制格同步显影：无论停定前显示的是哪一个，观感一致
+      const cells = reel.children.length; // 含末尾落点复制格
+      // 视觉循环长度必须不含复制格：复制格排在循环之外做铺垫，减速尾段
+      // offset→loopLen 时窗口恰好停在与首格同内容的复制格上，复位无跳变；
+      // 若把复制格算进循环，它会提前滑出窗口顶、下方露出条带外的空白
+      const loopLen = (cells - 1) * cellH;
+      const total = (laps + 1) * loopLen; // 逻辑滚动量恰为整圈；视觉位置对 loopLen 取模循环
+      // 落点格与其末尾复制格同步落定：无论停定前显示的是哪一个，观感一致
       const landingCells = [reel.firstElementChild, reel.lastElementChild];
       let materialized = false;
       const t0 = performance.now();
@@ -133,19 +136,15 @@ export function mount(stage, ctx) {
     const isJackpot = targets.every((t) => t.id === DIAMOND.id) && result.result === "prize";
     // 三列首格（落点窗口）放各自的轴面符号；末尾再补一格同样的复制——
     // 滚动量恰为整圈，收尾减速时滑入视野的是这格复制而非空白，停定瞬间
-    // 复位 translateY(0) 换回首格，两者同内容同显影状态，观感无缝。
-    // 弹窗关闭后 buildReels() 重建复原。渐变显影见 base.css 的 .is-landing。
+    // 复位 translateY(0) 换回首格，两者同内容同高光状态，观感无缝。
+    // 图案全程可见、绝不隐藏（用户明确要求）；落定高光见 base.css 的 .is-landing。
+    // 弹窗关闭后 buildReels() 重建复原。
     reels.forEach((reel, col) => {
       const first = reel.firstElementChild;
       const t = targets[col];
       first.dataset.sym = t.id;
       first.innerHTML = `<span class="sc-emoji${t.id === DIAMOND.id ? " sc-diamond" : ""}">${t.emoji}</span><span class="sc-name">${t.name}</span>`;
-      const dup = first.cloneNode(true);
-      reel.appendChild(dup);
-      if (!ctx.reduced) {
-        // 滚动期间藏住落点图案，停定前以渐变蒙版 + 模糊聚焦"剪出"
-        [first, dup].forEach((c) => { c.style.opacity = "0"; });
-      }
+      reel.appendChild(first.cloneNode(true));
     });
 
     btn.disabled = true;

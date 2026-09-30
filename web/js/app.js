@@ -3,7 +3,7 @@
 import { api } from "./api.js?v=10";
 import { fx } from "./fx.js?v=10";
 import { music } from "./music.js?v=10";
-import { FORMS } from "./forms/index.js?v=11";
+import { FORMS } from "./forms/index.js?v=12";
 
 const THEMES = [
   { id: "festive", name: "红金福运", desc: "中式礼堂红灯笼下的鎏金转盘", swatches: ["#6D1420", "#E8434E", "#F5C451", "#FFF6E5"] },
