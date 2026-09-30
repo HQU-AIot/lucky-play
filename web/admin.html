@@ -174,7 +174,7 @@
       </tr></thead>
       <tbody id="odds-rows"></tbody>
     </table>
-    <p class="note">以上为三轴独立抽取的理论值；被关闭的组合（两同手柄、超级大奖关闭时的三钻）会自动重抽，实际分布略偏向其余组合。</p>
+    <p class="note">以上为三轴独立抽取的理论值；被关闭的组合（超级大奖关闭时的三钻）会自动重抽，实际分布略偏向其余组合。</p>
   </div>
 
   <div class="card">
@@ -302,9 +302,6 @@ function renderOdds(d) {
       name += ` <span class="prob-note" title="超级大奖已关闭，三钻会被自动重抽">重抽</span>`;
     }
     let pair = pct(odds["pair_" + s]);
-    if (s === "gamesir") {
-      pair += ` <span class="prob-note" title="手柄仅一件，两同手柄会被自动重抽">重抽</span>`;
-    }
     return `<tr><td>${name}</td><td>${pct(odds["triple_" + s])}</td><td>${pair}</td></tr>`;
   });
   rows.push(`<tr class="odds-mixed"><td>🎲 没抽到（全不同）</td><td colspan="2">${pct(odds.mixed)}</td></tr>`);

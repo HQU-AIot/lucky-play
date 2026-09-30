@@ -111,7 +111,7 @@ def test_drain_all_stock_three_rounds():
         client.put("/api/admin/weights", json={"weights": DEFAULT_WEIGHTS, "slot_weights": ws, "thanks_weight": 0}, headers=TOKEN)
         client.put("/api/admin/slot", json={"diamond_weight": 15, "gamesir_enabled": True, "jackpot_enabled": True}, headers=TOKEN)
         client.post("/api/admin/history/reset", headers=TOKEN)
-        # 每轮随机总量（1-3 件）逼出边界；手柄固定 1 件（业务规则："两同手柄重抽"
+        # 每轮随机总量（1-3 件）逼出边界；手柄固定 1 件（轴面权重本轮置 0 避免干扰）
         # 与"三同手柄+任选"都建立在手柄仅 1 件之上）
         grand_total = 0
         for pid in ALL_IDS:

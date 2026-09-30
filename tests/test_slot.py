@@ -2,6 +2,7 @@
 
 from fastapi.testclient import TestClient
 
+import app.main as main_mod
 from app.main import app
 
 client = TestClient(app)
@@ -26,6 +27,22 @@ def _rig_weights(keep: dict[str, float], thanks: float = 0):
         json={"weights": w, "slot_weights": w, "thanks_weight": thanks},
         headers=TOKEN,
     )
+
+
+class _ScriptedRng:
+    """替换 app.main.rng 的确定性假随机：按脚本逐次返回 choices 的结果。"""
+
+    def __init__(self, scripts):
+        self.scripts = list(scripts)
+        self.calls = 0
+
+    def choices(self, syms, weights, k):
+        out = self.scripts[self.calls] if self.calls < len(self.scripts) else [syms[0]] * k
+        self.calls += 1
+        return out
+
+    def choice(self, seq):
+        return seq[0]
 
 
 def _slot_draw():
@@ -90,19 +107,14 @@ def test_triple_normal_prize_grants_two_units():
     _restore()
 
 
-def test_triple_gamesir_grants_gamesir_plus_random_other():
+def test_triple_gamesir_grants_gamesir_plus_random_other(monkeypatch):
     """三同手柄 = 手柄 ×1 + 恰好一件其它奖品。"""
     _rig_weights({GAMESIR: 50, "nailong": 30, "bookmark": 30}, 0)
     client.put("/api/admin/slot", json={"diamond_weight": 0}, headers=TOKEN)
     before = {p["id"]: p["remaining"] for p in client.get("/api/prizes").json()["prizes"]}
-    r = None
-    for _ in range(100):
-        r = _slot_draw()
-        if r["symbols"] == [GAMESIR] * 3:
-            break
-        # 试抽会消耗其它奖品库存，快照逐抽刷新，中奖那把的"前值"才可比
-        before = {p["id"]: p["remaining"] for p in client.get("/api/prizes").json()["prizes"]}
-    assert r and r["symbols"] == [GAMESIR] * 3
+    monkeypatch.setattr(main_mod, "rng", _ScriptedRng([[GAMESIR, GAMESIR, GAMESIR]]))
+    r = _slot_draw()
+    assert r["symbols"] == [GAMESIR] * 3
     ids = [p["id"] for p in r["prizes"]]
     # 手柄 + 恰好一件其它有库存奖品（任选为全库存口径，不限权重）
     assert len(ids) == 2 and ids[0] == GAMESIR and ids[1] != GAMESIR
@@ -112,20 +124,20 @@ def test_triple_gamesir_grants_gamesir_plus_random_other():
     _restore()
 
 
-def test_pair_gamesir_never_wins():
-    """两同手柄不构成奖项（手柄仅 1 件）：大量抽签下手柄要么不出现、要么三同整套。"""
-    _rig_weights({GAMESIR: 100, "crawlpet": 1}, 0)
-    client.put("/api/admin/slot", json={"diamond_weight": 3}, headers=TOKEN)
-    client.put("/api/admin/stock", json={"id": "crawlpet", "remaining": 50, "total": 50}, headers=TOKEN)
-    for _ in range(120):
-        r = _slot_draw()
-        if r["result"] == "choose":
-            continue  # 双钻自选回执尚未发奖，无 prizes
-        granted_gamesir = [p for p in r.get("prizes", []) if p["id"] == GAMESIR]
-        if granted_gamesir:
-            # 手柄只能以"三同手柄"整套出现，且单次最多 1 件
-            assert r["symbols"] == [GAMESIR] * 3
-            assert len(granted_gamesir) == 1
+def test_pair_gamesir_pays_single_unit(monkeypatch):
+    _rig_weights({GAMESIR: 1, "crawlpet": 0}, 0)
+    client.put("/api/admin/slot", json={"diamond_weight": 30, "gamesir_enabled": True, "jackpot_enabled": False}, headers=TOKEN)
+    client.put("/api/admin/stock", json={"id": "crawlpet", "remaining": 0, "total": 4}, headers=TOKEN)
+    client.put("/api/admin/stock", json={"id": GAMESIR, "remaining": 1, "total": 1}, headers=TOKEN)
+    # 脚本化 rng 强制第一抽为"两同手柄 + 钻石"，确定性覆盖两同手柄发奖分支
+    monkeypatch.setattr(main_mod, "rng", _ScriptedRng([[GAMESIR, GAMESIR, DIAMOND]]))
+    r = _slot_draw()
+    assert r["symbols"] == [GAMESIR, GAMESIR, DIAMOND]
+    assert r["result"] == "prize"
+    assert [p["id"] for p in r["prizes"]] == [GAMESIR]  # 只发这 1 件
+    # 发完后库存归零，手柄退出轴面：后续抽取不再出现手柄符号
+    r2 = _slot_draw()
+    assert GAMESIR not in r2["symbols"]
     _restore()
 
 
@@ -134,6 +146,7 @@ def test_jackpot_three_diamonds_one_of_each():
     _rig_weights({}, 0)
     client.put("/api/admin/slot", json={"diamond_weight": 50, "gamesir_enabled": True, "jackpot_enabled": True}, headers=TOKEN)
     client.put("/api/admin/stock", json={"id": "crawlpet", "remaining": 0, "total": 4}, headers=TOKEN)
+    client.post("/api/admin/history/reset", headers=TOKEN)  # 计数只含本次超级大奖
     r = _slot_draw()
     assert r["symbols"] == [DIAMOND] * 3
     ids = sorted(p["id"] for p in r["prizes"])

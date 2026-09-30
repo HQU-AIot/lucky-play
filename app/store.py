@@ -249,7 +249,7 @@ class Store:
           超级大奖开关关闭时该组合重抽；
         - 两同钻石 = 中奖者现场自选：本事务只圈出可选清单（有库存的非手柄
           奖品）并签发一次性凭据、零扣减零流水，等 choose_pending() 确认；
-        - 两同手柄不可能中奖（手柄仅 1 件）→ 重抽。
+        - 两同 = ×1（手柄单件库存恰好发 1 件；2026-09-30 按需求取消"两同手柄重抽"）。
         除双钻自选外，其余"任选"都在事务内由系统随机决定并逐件写流水。
         """
         from .lottery import DIAMOND, slot_outcome, slot_pool, slot_spin
@@ -298,9 +298,8 @@ class Store:
                                     for pid in avail
                                 ]
                             break
-                        if sym == "gamesir":
-                            continue  # 手柄只有 1 件，两同手柄不构成奖项
-                        wins = [sym] * min(1, int(stock[sym]["remaining"]))  # 两同 = ×1
+                        # 两同 = ×1（含手柄：单件库存恰好发这 1 件，2026-09-30 按需求取消重抽）
+                        wins = [sym] * min(1, int(stock[sym]["remaining"]))
                         result = "prize"
                         break
                     # triple
