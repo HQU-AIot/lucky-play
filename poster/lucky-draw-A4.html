@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>幸运抽奖 · 国庆前夜（A4 海报）</title>
+<style>
+  /* ───────── 设计 token：红金国潮庆典 ─────────
+     深红 #6D1420（底） · 大红 #E8434E（灯笼/点缀）
+     鎏金 #F5C451（标题/金线） · 赤金 #B8862D（暗金描边）
+     米白 #FFF6E5（正文） · 绛 #4A0C15（牌匾/暗部）
+     字体角色：标题=宋体衬线大字 · 正文/数据=黑体        */
+  :root {
+    --red-deep: #6D1420;
+    --red: #E8434E;
+    --gold: #F5C451;
+    --gold-deep: #B8862D;
+    --paper: #FFF6E5;
+    --maroon: #4A0C15;
+    --serif: "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif;
+    --sans: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #2b0a10; }
+  body { display: flex; justify-content: center; padding: 16px 0; }
+  .poster {
+    width: 210mm; height: 297mm;
+    background:
+      radial-gradient(ellipse 90mm 60mm at 50% 108%, rgba(232, 67, 78, .38), transparent 70%),
+      radial-gradient(ellipse 70mm 45mm at 8% -2%, rgba(232, 67, 78, .30), transparent 70%),
+      radial-gradient(ellipse 70mm 45mm at 92% -2%, rgba(232, 67, 78, .30), transparent 70%),
+      linear-gradient(175deg, #7a1725 0%, var(--red-deep) 38%, #57101b 78%, #430b13 100%);
+    color: var(--paper);
+    font-family: var(--sans);
+    position: relative;
+    overflow: hidden;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  /* 金粉：一层 box-shadow 点阵，印刷安全 */
+  .dust, .dust::after {
+    content: ""; position: absolute; width: 1.2mm; height: 1.2mm; border-radius: 50%;
+    background: var(--gold); opacity: .8;
+    box-shadow: 38mm 30mm 0 -0.2mm rgba(245,196,81,.55), 172mm 44mm 0 0.3mm rgba(245,196,81,.4),
+      26mm 118mm 0 -0.3mm rgba(245,196,81,.45), 186mm 132mm 0 -0.1mm rgba(245,196,81,.5),
+      14mm 205mm 0 0.2mm rgba(245,196,81,.4), 196mm 236mm 0 -0.2mm rgba(245,196,81,.5),
+      30mm 262mm 0 0 mm rgba(245,196,81,.4), 178mm 272mm 0 -0.3mm rgba(245,196,81,.45);
+  }
+  .dust::after {
+    transform: translate(96mm, 12mm);
+    box-shadow: 52mm 84mm 0 -0.3mm rgba(245,196,81,.4), 60mm 190mm 0 0.2mm rgba(245,196,81,.45),
+      22mm 158mm 0 -0.2mm rgba(245,196,81,.5), 84mm 250mm 0 -0.1mm rgba(245,196,81,.4);
+  }
+  /* 双线金框 + 四角回纹点缀 */
+  .frame {
+    position: absolute; inset: 7mm;
+    border: 0.7mm solid var(--gold-deep);
+    outline: 0.25mm solid var(--gold);
+    outline-offset: 1.3mm;
+    border-radius: 3mm;
+    pointer-events: none;
+  }
+  .frame i {
+    position: absolute; width: 7mm; height: 7mm;
+    border: 0.7mm solid var(--gold);
+  }
+  .frame i:nth-child(1) { top: -0.7mm; left: -0.7mm; border-right: none; border-bottom: none; border-radius: 3mm 0 0 0; }
+  .frame i:nth-child(2) { top: -0.7mm; right: -0.7mm; border-left: none; border-bottom: none; border-radius: 0 3mm 0 0; }
+  .frame i:nth-child(3) { bottom: -0.7mm; left: -0.7mm; border-right: none; border-top: none; border-radius: 0 0 0 3mm; }
+  .frame i:nth-child(4) { bottom: -0.7mm; right: -0.7mm; border-left: none; border-top: none; border-radius: 0 0 3mm 0; }
+
+  .inner { position: absolute; inset: 13mm 13mm 11mm; display: flex; flex-direction: column; }
+
+  /* ── 头部：灯笼 + 烫金牌匾 ── */
+  header { text-align: center; position: relative; padding-top: 2mm; }
+  .lantern {
+    position: absolute; top: -6mm; width: 17mm; height: 14mm;
+    background: radial-gradient(ellipse at 50% 42%, #ff7a72 0%, var(--red) 55%, #a8222e 100%);
+    border-radius: 50% / 46%;
+    box-shadow: inset 0 -2mm 3mm rgba(74, 12, 21, .55), 0 1.5mm 3mm rgba(0,0,0,.3);
+  }
+  .lantern::before, .lantern::after { content: ""; position: absolute; left: 50%; transform: translateX(-50%); }
+  .lantern::before { top: -2.4mm; width: 7mm; height: 2.2mm; background: linear-gradient(180deg, var(--gold), var(--gold-deep)); border-radius: 0.8mm; }
+  .lantern::after { bottom: -6.5mm; width: 1mm; height: 4.5mm; background: var(--gold); }
+  .lantern.l { left: 10mm; transform: rotate(-7deg); }
+  .lantern.r { right: 10mm; transform: rotate(7deg); }
+  .lantern small {
+    position: absolute; top: 3.6mm; left: 0; right: 0; text-align: center;
+    font-size: 7.5pt; font-weight: 700; color: var(--gold); text-shadow: 0 0.3mm 0.5mm rgba(74,12,21,.6);
+  }
+  .plaque {
+    display: inline-block; padding: 5.5mm 13mm 6mm;
+    background: linear-gradient(180deg, #5d1020, var(--maroon) 60%, #38080f);
+    border: 0.8mm solid var(--gold-deep);
+    outline: 0.3mm solid var(--gold);
+    outline-offset: 1.1mm;
+    border-radius: 2.5mm;
+    box-shadow: 0 2.5mm 5mm rgba(0,0,0,.38), inset 0 0.6mm 0 rgba(245,196,81,.25);
+  }
+  h1 {
+    font-family: var(--serif); font-weight: 900; font-size: 46pt; line-height: 1.04;
+    letter-spacing: 0.06em; text-indent: 0.06em;
+    background: linear-gradient(180deg, #fff3cf 6%, var(--gold) 42%, #d5a32b 62%, #f8d97e 88%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0.7mm 0.4mm rgba(20, 2, 4, .65));
+  }
+  .sub {
+    margin-top: 3.2mm; font-size: 12.5pt; font-weight: 700; letter-spacing: 0.3em; text-indent: 0.3em;
+    color: var(--gold);
+  }
+  .date {
+    margin-top: 1.2mm; font-size: 10pt; letter-spacing: 0.42em; text-indent: 0.42em;
+    color: rgba(255, 246, 229, .85);
+  }
+  .date b { color: var(--gold); font-weight: 700; }
+
+  /* ── 分节金线标题 ── */
+  .sec {
+    display: flex; align-items: center; gap: 4mm; margin: 4.8mm 0 3mm;
+  }
+  .sec::before, .sec::after { content: ""; flex: 1; height: 0.35mm; background: linear-gradient(90deg, transparent, var(--gold-deep)); }
+  .sec::after { background: linear-gradient(90deg, var(--gold-deep), transparent); }
+  .sec b {
+    font-family: var(--serif); font-size: 15pt; font-weight: 900; color: var(--gold);
+    letter-spacing: 0.28em; text-indent: 0.28em; white-space: nowrap;
+    text-shadow: 0 0.4mm 0.6mm rgba(20,2,4,.6);
+  }
+
+  /* ── 玩法双卡 ── */
+  .games { display: grid; grid-template-columns: 62mm 1fr; gap: 5mm; }
+  .card {
+    background: linear-gradient(180deg, rgba(255,246,229,.10), rgba(255,246,229,.045));
+    border: 0.35mm solid rgba(245, 196, 81, .55);
+    border-radius: 2.5mm;
+    padding: 4.5mm 5mm 5mm;
+  }
+  .card h3 {
+    font-family: var(--serif); font-size: 15.5pt; font-weight: 900; color: var(--paper);
+    letter-spacing: 0.1em; text-align: center;
+  }
+  .card h3 em { font-style: normal; color: var(--gold); }
+  .card .tag {
+    margin: 1.8mm 0 3.2mm; text-align: center; font-size: 8.5pt; letter-spacing: 0.18em;
+    color: rgba(255, 246, 229, .72);
+  }
+  .card ul { list-style: none; display: grid; gap: 2.6mm; }
+  .card li {
+    position: relative; padding-left: 5.5mm; font-size: 10.5pt; line-height: 1.5;
+  }
+  .card li::before {
+    content: ""; position: absolute; left: 0.6mm; top: 1.9mm;
+    width: 2mm; height: 2mm; transform: rotate(45deg);
+    background: var(--gold);
+  }
+  .card li b { color: var(--gold); }
+  /* 迷你转盘（纯 CSS 装饰，补大转盘卡片下部留白） */
+  .mini-wheel {
+    margin: 4.5mm auto 0.5mm; width: 31mm; height: 31mm; border-radius: 50%;
+    background: conic-gradient(
+      var(--gold) 0 45deg, var(--red) 0 90deg, #fff3cf 0 135deg, var(--red) 0 180deg,
+      var(--gold) 0 225deg, var(--red) 0 270deg, #fff3cf 0 315deg, var(--red) 0 360deg);
+    border: 1.2mm solid var(--gold-deep);
+    box-shadow: 0 1.5mm 3.5mm rgba(0, 0, 0, .4), inset 0 0 2.5mm rgba(74, 12, 21, .45);
+    position: relative;
+  }
+  .mini-wheel::after {
+    content: "🎁"; position: absolute; inset: 0; margin: auto;
+    width: 11.5mm; height: 11.5mm; border-radius: 50%;
+    background: var(--maroon); border: 0.5mm solid var(--gold);
+    display: grid; place-items: center; font-size: 6.5mm;
+  }
+  .mini-wheel .ptr {
+    position: absolute; top: -5mm; left: 50%; transform: translateX(-50%);
+    width: 0; height: 0; border: 2.6mm solid transparent; border-top: 5.2mm solid var(--gold);
+    filter: drop-shadow(0 0.6mm 0.6mm rgba(0, 0, 0, .45));
+  }
+
+  /* 对对碰规则表 */
+  .rules { display: grid; gap: 1.6mm; }
+  .rule {
+    display: grid; grid-template-columns: 24mm 1fr; align-items: center; gap: 3mm;
+    background: rgba(74, 12, 21, .35);
+    border: 0.25mm solid rgba(245, 196, 81, .32);
+    border-radius: 1.8mm; padding: 1.7mm 3mm 1.7mm 2.2mm;
+  }
+  .rule.hot { border-color: rgba(245, 196, 81, .85); background: rgba(184, 134, 45, .28); }
+  .combo { display: flex; gap: 1.1mm; justify-content: center; }
+  .combo .t {
+    width: 5.6mm; height: 5.6mm; border-radius: 1.1mm;
+    background: rgba(255, 246, 229, .14);
+    border: 0.25mm solid rgba(255, 246, 229, .4);
+    display: grid; place-items: center; font-size: 8.5pt; line-height: 1;
+  }
+  .combo .t.on { background: linear-gradient(180deg, var(--red), #b22330); border-color: #ff8b8b; }
+  .combo .t.dm { background: rgba(245, 196, 81, .2); border-color: var(--gold); }
+  .rule .what { font-size: 10pt; line-height: 1.42; }
+  .rule .what b { color: var(--gold); }
+  .rule .what small { display: block; font-size: 8pt; color: rgba(255, 246, 229, .68); }
+  .rule.big .what b { font-size: 11pt; }
+
+  /* ── 奖品墙 ── */
+  .wall { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm; }
+  .prize {
+    background: rgba(74, 12, 21, .32);
+    border: 0.3mm solid rgba(245, 196, 81, .4);
+    border-radius: 2mm;
+    padding: 2.8mm 1mm 2.6mm;
+    text-align: center;
+  }
+  .prize .e { display: block; font-size: 19pt; line-height: 1.15; }
+  .prize .n { display: block; margin-top: 1.2mm; font-size: 9pt; font-weight: 600; letter-spacing: 0.04em; }
+  .prize.jp { border-color: var(--gold); background: rgba(184, 134, 45, .3); }
+  .wall-note {
+    margin-top: 2.8mm; text-align: center; font-size: 9pt; color: rgba(255, 246, 229, .82);
+  }
+  .wall-note b { color: var(--gold); }
+
+  /* ── 底栏 ── */
+  footer { margin-top: auto; }
+  .info { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 4mm; }
+  .info .cell {
+    border: 0.3mm solid rgba(245, 196, 81, .45); border-radius: 2mm;
+    padding: 2.6mm 3mm; text-align: center;
+    background: rgba(74, 12, 21, .3);
+  }
+  .info .k { font-size: 8pt; letter-spacing: 0.3em; text-indent: 0.3em; color: var(--gold); }
+  .info .v { margin-top: 1.2mm; font-size: 10pt; font-weight: 700; line-height: 1.4; }
+  .info .v small { display: block; font-size: 8.5pt; font-weight: 400; color: rgba(255, 246, 229, .75); }
+  .fine {
+    margin-top: 2.6mm; text-align: center; font-size: 8pt; letter-spacing: 0.12em;
+    color: rgba(255, 246, 229, .6);
+  }
+  .fine b { color: var(--gold); font-weight: 700; }
+
+  /* A4 打印：一页铺满 */
+  @page { size: A4 portrait; margin: 0; }
+  @media print {
+    body { padding: 0; background: none; }
+    .poster { width: 210mm; height: 297mm; }
+  }
+</style>
+</head>
+<body>
+<div class="poster">
+  <div class="dust"></div>
+  <div class="frame"><i></i><i></i><i></i><i></i></div>
+  <div class="inner">
+
+    <header>
+      <span class="lantern l"><small>抽</small></span>
+      <span class="lantern r"><small>奖</small></span>
+      <div class="plaque"><h1>幸运抽奖</h1></div>
+      <p class="sub">国庆前夜专场</p>
+      <p class="date">2026 年 <b>9</b> 月 <b>30</b> 日 · 人人有份 · 手气说了算</p>
+    </header>
+
+    <div class="sec"><b>玩法规则</b></div>
+    <section class="games">
+      <article class="card">
+        <h3>🎡 大转盘</h3>
+        <p class="tag">八扇区 · 蓄力冲刺</p>
+        <ul>
+          <li>转到哪个<b>拿哪个</b>，指针说了算</li>
+          <li>人人可抽，全凭手气</li>
+          <li><b>🎮 手柄不上转盘</b>，只藏在老虎机里</li>
+        </ul>
+        <div class="mini-wheel"><i class="ptr"></i></div>
+      </article>
+      <article class="card">
+        <h3>🎰 老虎机 <em>· 对对碰</em></h3>
+        <p class="tag">三个图案，碰对了就中奖</p>
+        <div class="rules">
+          <div class="rule">
+            <span class="combo"><i class="t">🍭</i><i class="t">🐲</i><i class="t">📓</i></span>
+            <span class="what">三个<b>全不同</b> = 没抽中<small>差一点点，下次一定</small></span>
+          </div>
+          <div class="rule">
+            <span class="combo"><i class="t on">🍭</i><i class="t on">🍭</i><i class="t">📓</i></span>
+            <span class="what"><b>两个相同</b> = 该奖品 ×1</span>
+          </div>
+          <div class="rule">
+            <span class="combo"><i class="t on">🍭</i><i class="t on">🍭</i><i class="t on">🍭</i></span>
+            <span class="what"><b>三个相同</b> = 该奖品 ×2</span>
+          </div>
+          <div class="rule">
+            <span class="combo"><i class="t">🎮</i><i class="t">🎮</i><i class="t">🎮</i></span>
+            <span class="what"><b>🎮×3</b> = 盖世小鸡手柄 + 任选一件其他奖品</span>
+          </div>
+          <div class="rule">
+            <span class="combo"><i class="t dm">💎</i><i class="t dm">💎</i><i class="t">🍭</i></span>
+            <span class="what"><b>💎×2</b> = 现场任选一件奖品<small>手柄除外，点选确认即领取</small></span>
+          </div>
+          <div class="rule big hot">
+            <span class="combo"><i class="t dm">💎</i><i class="t dm">💎</i><i class="t dm">💎</i></span>
+            <span class="what"><b>💎×3 超级大奖</b><small>除手柄外，每类奖品各拿一份——全是你的！</small></span>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <div class="sec"><b>奖品一览</b></div>
+    <section>
+      <div class="wall">
+        <div class="prize"><span class="e">🍭</span><span class="n">不二家棒棒糖</span></div>
+        <div class="prize"><span class="e">🐲</span><span class="n">奶龙手办</span></div>
+        <div class="prize"><span class="e">📓</span><span class="n">口袋笔记本</span></div>
+        <div class="prize"><span class="e">🎨</span><span class="n">油画书签</span></div>
+        <div class="prize"><span class="e">🦈</span><span class="n">鲨鱼匕首</span></div>
+        <div class="prize"><span class="e">🦎</span><span class="n">电子爬宠</span></div>
+        <div class="prize jp"><span class="e">🎮</span><span class="n">盖世小鸡手柄</span></div>
+        <div class="prize"><span class="e">🪪</span><span class="n">NFC 纪念卡</span></div>
+      </div>
+      <p class="wall-note">💎 老虎机摇出钻石图案：<b>两颗 = 任选一件奖品，三颗 = 超级大奖通通拿走</b>；🎁 奖品数量有限，抽完即止</p>
+    </section>
+
+    <footer>
+      <div class="sec"><b>活动须知</b></div>
+      <div class="info">
+        <div class="cell">
+          <p class="k">时 间</p>
+          <p class="v">2026-09-30<small>国庆前夜</small></p>
+        </div>
+        <div class="cell">
+          <p class="k">地 点</p>
+          <p class="v">Atiot9号摊位<small>现场开抽</small></p>
+        </div>
+        <div class="cell">
+          <p class="k">领奖方式</p>
+          <p class="v">中奖找管理员<small>登记后一次性领取</small></p>
+        </div>
+      </div>
+      <p class="fine">现场开抽 · 即抽即开 · <b>本活动最终解释权归主办方所有</b></p>
+    </footer>
+
+  </div>
+</div>
+</body>
+</html>
