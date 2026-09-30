@@ -107,6 +107,26 @@ def test_triple_normal_prize_grants_two_units():
     _restore()
 
 
+def test_slot_weights_accept_diamond_key():
+    """slot_weights 可直接携带 diamond（自动路由到钻石权重配置）——杜绝"轴上漏算钻石"。
+
+    曾三次因钻石权重存放在独立配置键而在脚本/求解器里漏算：本测试锁死
+    "合并写入 + axis_weights 合并读出"这两半接口契约。
+    """
+    ws = _weights_only({"lollipop": 8, "nailong": 84.6, "notebook": 6, "nfccard": 10,
+                        "bookmark": 3, "shark": 8, "crawlpet": 7, GAMESIR: 1})
+    ws["diamond"] = 12  # 修复前此处 404「未知奖品: ['diamond']」
+    r = client.put("/api/admin/weights", json={"slot_weights": ws}, headers=TOKEN)
+    assert r.status_code == 200
+    state = client.get("/api/admin/state", headers=TOKEN).json()
+    assert state["slot"]["diamond_weight"] == 12
+    axis = state["slot"]["axis_weights"]
+    assert axis["diamond"] == 12 and axis["nailong"] == 84.6
+    assert set(axis) == set(_weights_only({})) | {"diamond"}  # 8 奖品 + 钻石，完整轴面
+    assert 0 < state["slot"]["odds"]["mixed"] < 1
+    _restore()
+
+
 def test_triple_gamesir_grants_gamesir_plus_random_other(monkeypatch):
     """三同手柄 = 手柄 ×1 + 恰好一件其它奖品。"""
     _rig_weights({GAMESIR: 50, "nailong": 30, "bookmark": 30}, 0)

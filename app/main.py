@@ -104,7 +104,7 @@ def _slot_pool_and_weights(dyn_enabled: bool, dyn_mode: str):
 
 
 def slot_section(dyn_enabled: bool, dyn_mode: str) -> dict:
-    """后台老虎机区块：开关、钻石权重与理论赔率（三轴独立口径）。"""
+    """后台老虎机区块：开关、钻石权重、完整轴面权重与理论赔率（三轴独立口径）。"""
     slot = _slot_cfg()
     pool = slot_pool(
         _slot_pool_and_weights(dyn_enabled, dyn_mode),
@@ -112,7 +112,11 @@ def slot_section(dyn_enabled: bool, dyn_mode: str) -> dict:
         slot["gamesir_enabled"],
     )
     odds = slot_odds(pool)  # 原始浮点：三同等小概率事件 round 到 4 位会被抹成 0，展示精度交给前端 pct()
-    return {**slot, "odds": odds}
+    # 轴面权重合并视图：8 奖品 + 钻石一字典给出，外部脚本/求解器以此为唯一事实来源
+    # specs(use_slot_weight=True) 约定：老虎机权重承载在 base_weight 字段
+    axis_weights = {s.id: s.base_weight for s in store.specs(use_slot_weight=True)}
+    axis_weights["diamond"] = slot["diamond_weight"]
+    return {**slot, "axis_weights": axis_weights, "odds": odds}
 
 
 def _public_prizes() -> list[dict]:
@@ -304,10 +308,15 @@ class WeightsIn(BaseModel):
 @app.put("/api/admin/weights", dependencies=[Depends(admin_auth)])
 def admin_weights(payload: WeightsIn):
     known = {p["id"] for p in store.list_prizes()}
-    unknown = (set(payload.weights) | set(payload.slot_weights)) - known
+    slot_in = dict(payload.slot_weights or {})
+    # 钻石是轴面一等公民：允许随 slot_weights 一并下发，自动路由到独立配置键，
+    # 从接口层面杜绝"轴上漏算钻石"这类反复出现的错误
+    diamond_w = slot_in.pop("diamond", None)
+    unknown = (set(payload.weights) | set(slot_in)) - known
     if unknown:
         raise HTTPException(status_code=404, detail=f"未知奖品: {sorted(unknown)}")
-    store.set_weights(payload.weights, payload.thanks_weight, payload.slot_weights or None)
+    store.set_weights(payload.weights, payload.thanks_weight, slot_in or None,
+                      slot_diamond_weight=diamond_w)
     return {"ok": True}
 
 

@@ -468,6 +468,7 @@ class Store:
         weights: dict[str, float],
         thanks_weight: float | None,
         slot_weights: dict[str, float] | None = None,
+        slot_diamond_weight: float | None = None,
     ) -> None:
         with self._lock:
             self._conn.execute("BEGIN IMMEDIATE")
@@ -479,6 +480,12 @@ class Store:
                 for pid, w in (slot_weights or {}).items():
                     self._conn.execute(
                         "UPDATE prizes SET slot_weight = ? WHERE id = ?", (float(w), pid)
+                    )
+                if slot_diamond_weight is not None:
+                    self._conn.execute(
+                        "INSERT INTO config (key, value) VALUES ('slot_diamond_weight', ?)"
+                        " ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                        (str(float(slot_diamond_weight)),),
                     )
                 if thanks_weight is not None:
                     self._conn.execute(
