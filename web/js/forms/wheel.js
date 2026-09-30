@@ -1,16 +1,15 @@
-/* 形式一：大转盘。Canvas 离屏渲染 + rAF 四段动画：
-   蓄力回拉 → 爆发加速 → 长减速(easeOutExpo) → 过冲回摆。
+/* 形式一：大转盘。Canvas 离屏渲染 + rAF 三段动画：
+   蓄力回拉 → 爆发加速 → 长减速(easeOutExpo)直落中奖格。
    每跨过一条扇区边界，指针弹跳一次 + 合成 tick 声（密度随速度变化）。
-   总时长对齐音乐：RESULT_AT=5s 歌喊"停"时指针落定。 */
+   总时长对齐音乐：RESULT_AT=5s 歌喊"停"时指针落定。
+   （过冲回摆段已于 2026-09-30 按需求移除——用户不喜欢顿挫感） */
 
-import { easeInQuad, easeOutExpo, easeOutCubic, lerp, rand } from "../easing.js";
+import { easeInQuad, easeOutExpo, lerp, rand } from "../easing.js";
 import { RESULT_AT } from "../music.js?v=10";
 
 const TAU = Math.PI * 2;
 const WINDUP = 0.40;      // 蓄力时长 s
 const WINDUP_ANGLE = 0.26; // 回拉弧度 ≈ 15°
-const OVERSHOOT = 0.02;    // 过冲弧度 ≈ 1.1°（2026-09-30 按需求从 2.9° 调小）
-const SETTLE = 0.34;      // 过冲回摆时长 s
 
 export function mount(stage, ctx) {
   stage.innerHTML = `
@@ -158,9 +157,8 @@ export function mount(stage, ctx) {
     const relFinal = final - rotation; // 相对起始角的净转角
 
     const windT = ctx.reduced ? 0 : WINDUP;
-    // 主减速 = 5s − 蓄力 − 回摆（±40ms 抖动），落点卡在歌里的"停"
-    const spinT = ctx.reduced ? 0.7 : RESULT_AT - WINDUP - SETTLE + rand(-0.04, 0.04);
-    const settleT = ctx.reduced ? 0 : SETTLE;
+    // 主减速 = 5s − 蓄力（±40ms 抖动），落点卡在歌里的"停"
+    const spinT = ctx.reduced ? 0.7 : RESULT_AT - WINDUP + rand(-0.04, 0.04);
 
     hub.disabled = true;
     spinning = true;
@@ -177,10 +175,7 @@ export function mount(stage, ctx) {
           r = -WINDUP_ANGLE * easeInQuad(t / windT);
         } else if (t < windT + spinT) {
           const p = (t - windT) / spinT;
-          r = lerp(-WINDUP_ANGLE, relFinal + OVERSHOOT, easeOutExpo(p));
-        } else if (t < windT + spinT + settleT) {
-          const p = (t - windT - spinT) / settleT;
-          r = lerp(relFinal + OVERSHOOT, relFinal, easeOutCubic(p));
+          r = lerp(-WINDUP_ANGLE, relFinal, easeOutExpo(p));
         } else {
           r = final;
           rotation = ((final % TAU) + TAU) % TAU;
