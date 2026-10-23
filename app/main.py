@@ -12,7 +12,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from .inventory import Inventory, load_inventory
 from .lottery import (
@@ -52,7 +52,8 @@ async def revalidate_static(request: Request, call_next):
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    """422 详情回显 input 时不得携带 inf/NaN，否则 Starlette 序列化直接 500。"""
+    """422 详情回显 input 时不得携带 inf/NaN（Starlette 序列化直接 500）；
+    field_validator 抛的 ValueError 对象（藏在 errors[].ctx 里）同理不可序列化。"""
 
     def finite(obj):
         if isinstance(obj, float):
@@ -61,7 +62,9 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             return {k: finite(v) for k, v in obj.items()}
         if isinstance(obj, (list, tuple)):
             return [finite(v) for v in obj]
-        return obj
+        if isinstance(obj, (str, int, bool)) or obj is None:
+            return obj
+        return repr(obj)  # ValueError 等异常对象：转字符串保住可读的 422 响应
 
     return JSONResponse(status_code=422, content={"detail": finite(exc.errors())})
 
@@ -403,6 +406,14 @@ class PrizeIn(BaseModel):
     total_stock: int = Field(ge=0, le=1_000_000)
     is_grand: bool = False
 
+    @field_validator("name")
+    @classmethod
+    def _name_not_blank(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("名称不能为空白")
+        return v
+
 
 def _prize_out(prize: dict) -> dict:
     """CRUD 响应里的奖品视图（is_grand 转 bool，SQLite 存的是 0/1）。"""
@@ -422,7 +433,7 @@ def _prize_out(prize: dict) -> dict:
 def admin_add_prize(payload: PrizeIn):
     try:
         prize = store.add_prize(
-            payload.id, payload.name.strip(), payload.emoji,
+            payload.id, payload.name, payload.emoji,
             payload.base_weight, payload.slot_weight,
             payload.total_stock, payload.is_grand,
         )
@@ -438,6 +449,16 @@ class PrizePatch(BaseModel):
     emoji: str | None = Field(default=None, min_length=1, max_length=8)
     is_grand: bool | None = None
     total_stock: int | None = Field(default=None, ge=0, le=1_000_000)
+
+    @field_validator("name")
+    @classmethod
+    def _name_not_blank(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        v = v.strip()
+        if not v:
+            raise ValueError("名称不能为空白")
+        return v
 
 
 @app.put("/api/admin/prizes/{prize_id}", dependencies=[Depends(admin_auth)])

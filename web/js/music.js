@@ -50,8 +50,9 @@ export const music = {
   },
 
 
-  /** 每轮开始时调用（须处于点击引发的调用链内，浏览器才放行播放）。
-      reduced 实时读取：系统偏好中途变更无需刷新页面即生效。 */
+  /** 每轮开始时调用。放行条件是"用户曾与页面交互过"（粘性激活）——本调用
+      位于 await api.draw() 之后的异步续体同样有效；play() 被策略拒绝时
+      内部静默降级。reduced 实时读取：系统偏好中途变更无需刷新页面即生效。 */
   startRound() {
     stopFade();
     roundActive = false;

@@ -97,6 +97,9 @@ def load_inventory(
     spec 形如 "my_package.my_module:MyInventory"（模块路径:类名）。
     第三方实现的构造签名约定为 (db_path: Path)；库存不在本地文件时自行忽略
     该参数（SQLite Store 额外接受可选的 prizes_file 用于自定义播种）。
+
+    装载后做协议完整性抽查（关键抽奖方法必须存在），缺方法的实现启动即报错
+    而不是等活动进行中才以 AttributeError 爆发。
     """
     if not spec:
         from .store import Store
@@ -112,4 +115,23 @@ def load_inventory(
         cls = getattr(module, cls_name)
     except (ImportError, AttributeError) as exc:
         raise RuntimeError(f"装载 LUCKY_INVENTORY={spec!r} 失败: {exc}") from exc
-    return cls(db_path)
+    if prizes_file:
+        # 两变量同设：自定义播种清单只对默认 Store 生效，第三方实现自管奖池。
+        # 不静默丢弃——运维按 JSON 配了奖池却发现落到内置默认，是最难排查的一类错
+        import sys
+
+        print(
+            f"[lucky-play] 提示: 已配置 LUCKY_INVENTORY={spec!r}，"
+            f"LUCKY_PRIZES_JSON={prizes_file!r} 不会传给第三方实现（其奖池由自身管理）",
+            file=sys.stderr,
+        )
+    inv = cls(db_path)
+    _required = ("specs", "draw", "draw_slot", "choose_pending", "list_prizes",
+                 "set_weights", "set_stock", "get_config")
+    missing = [m for m in _required if not hasattr(inv, m)]
+    if missing:
+        raise RuntimeError(
+            f"LUCKY_INVENTORY={spec!r} 的实现缺少 Inventory 协议方法: {missing}；"
+            f"完整契约见 app/inventory.py 与 docs/CUSTOMIZE.md"
+        )
+    return inv

@@ -70,6 +70,26 @@ class TestOff:
         assert eff["c"] == 0.0
         assert thanks == 9.0
 
+    def test_off_mode_literal_disables_transfer(self):
+        """mode="off" 与关动态转移等价（docstring 承诺）：抽空奖品权重不放给谢谢参与。
+
+        外部 Inventory 实现可能回传 (enabled=True, mode="off")，行为必须在
+        effective_weights 入口统一归一，不能依赖调用方自觉。"""
+        eff, thanks = effective_weights(make_specs(), 9, True, DYNAMIC_OFF)
+        assert eff["b"] == 20.0  # 未按 per_win 缩放
+        assert eff["c"] == 0.0
+        assert thanks == 9.0  # 已抽空的 c（权重 50）不转移进来
+
+
+class TestContractViolation:
+    def test_remaining_over_total_clamped(self):
+        """remaining > total 属 Inventory 契约违约输入：钳制到满库存口径，
+        有效权重不超过 W、谢谢参与有效权重不为负（负值会让"谢谢"永不出现）。"""
+        specs = [PrizeSpec("x", "违约奖", 10, 5, 8)]  # remaining 8 > total 5
+        eff, thanks = effective_weights(specs, 3, True, DYNAMIC_PER_WIN)
+        assert eff["x"] == 10.0  # 钳到 W，而不是 10*8/5=16
+        assert thanks == 3.0  # 无负 bonus
+
 
 class TestPick:
     def test_respects_zero_weight(self):

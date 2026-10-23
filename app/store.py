@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+import math
 import secrets
 import sqlite3
 import threading
@@ -47,6 +48,10 @@ DEFAULT_CONFIG = {
 
 DEFAULT_ADMIN_TOKEN = "123456"
 
+# 奖品 id 保留字：thanks=谢谢参与哨兵、diamond=老虎机钻石符号。
+# 撞车会让该奖品永远无法被抽中或权重被系统符号覆盖（评审确认的真实缺陷）。
+RESERVED_PRIZE_IDS = frozenset({"thanks", "diamond"})
+
 CONFIG_KEYS = set(DEFAULT_CONFIG)
 
 
@@ -72,6 +77,7 @@ def load_seed(prizes_file: Path | str | None) -> list[tuple]:
     if not isinstance(raw, list) or not raw:
         raise ValueError(f"奖品清单 JSON 应为非空数组（{path}）")
     items: list[tuple] = []
+    seen_ids: set[str] = set()
     for i, ent in enumerate(raw):
         if not isinstance(ent, dict):
             raise ValueError(f"奖品清单第 {i + 1} 项应为对象: {ent!r}")
@@ -79,16 +85,29 @@ def load_seed(prizes_file: Path | str | None) -> list[tuple]:
         name = ent.get("name")
         if not isinstance(pid, str) or not (1 <= len(pid) <= 32):
             raise ValueError(f"奖品清单第 {i + 1} 项 id 非法（1-32 字符）: {pid!r}")
+        if pid in seen_ids:
+            raise ValueError(f"奖品清单第 {i + 1} 项 id 重复: {pid!r}")
+        if pid in RESERVED_PRIZE_IDS:
+            raise ValueError(f"奖品清单第 {i + 1} 项 id 是保留字（thanks/diamond）: {pid!r}")
         if not isinstance(name, str) or not name.strip():
             raise ValueError(f"奖品清单第 {i + 1} 项 name 非法: {name!r}")
         emoji = ent.get("emoji") or "🎁"
         base_w = ent.get("base_weight", 0)
         slot_w = ent.get("slot_weight", base_w)
         total = ent.get("total_stock", 0)
-        if not all(isinstance(v, (int, float)) and v >= 0 for v in (base_w, slot_w)):
-            raise ValueError(f"奖品 {pid} 的权重须为非负数值")
+        # isfinite 拦 Infinity（json.loads 接受该非标字面量，inf 落库会毒化全部
+        # 概率计算——与管理 API 的 allow_inf_nan=False 防线对齐）；NaN 由
+        # not (v >= 0) 一并拒绝
+        if not all(
+            isinstance(v, (int, float))
+            and v >= 0
+            and math.isfinite(v)
+            for v in (base_w, slot_w)
+        ):
+            raise ValueError(f"奖品 {pid} 的权重须为非负有限数值")
         if not isinstance(total, int) or total < 0:
             raise ValueError(f"奖品 {pid} 的 total_stock 须为非负整数")
+        seen_ids.add(pid)
         items.append((pid, name.strip(), emoji, float(base_w), float(slot_w),
                       total, bool(ent.get("is_grand", False))))
     return items
@@ -603,7 +622,12 @@ class Store:
         total_stock: int,
         is_grand: bool,
     ) -> dict:
-        """新增奖品（追加到展示顺序末尾，满库存起步）。id 重复抛 ValueError。"""
+        """新增奖品（追加到展示顺序末尾，满库存起步）。
+
+        id 重复或撞保留字（thanks/diamond）抛 ValueError。
+        """
+        if pid in RESERVED_PRIZE_IDS:
+            raise ValueError(f"奖品 id 是保留字（thanks/diamond）: {pid}")
         with self._lock:
             self._conn.execute("BEGIN IMMEDIATE")
             try:

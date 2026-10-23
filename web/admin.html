@@ -233,6 +233,22 @@
 const $ = (s) => document.querySelector(s);
 let token = localStorage.getItem("lucky.admin_token") || "";
 
+/* HTML 转义：奖品名/emoji 可含任意字符，拼 innerHTML/属性前必须转义（存储型 XSS） */
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[c]);
+}
+
+/* pydantic 422 的 detail 是错误对象数组，直接 String() 会变 "[object Object]" */
+function humanDetail(d) {
+  if (typeof d === "string") return d;
+  if (Array.isArray(d)) {
+    return d.map((e) => (e && e.msg) ? `${(e.loc || []).slice(1).join(".")}: ${e.msg}` : JSON.stringify(e)).join("；");
+  }
+  return JSON.stringify(d);
+}
+
 const MODE_TEXT = {
   per_win: "每抽走一件奖品，按比例把它的权重即时让给谢谢参与；库存抽空时恰好整体转移完。总概率恒定，只做再分配。",
   depleted: "整个奖品被抽空后，它的全部权重一次性让给谢谢参与；没抽空前概率保持不变。",
@@ -245,8 +261,19 @@ async function req(path, options = {}) {
   });
   if (res.status === 401) { showGate("令牌失效，重新输入"); throw new Error("unauthorized"); }
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+  if (!res.ok) throw new Error(humanDetail(data.detail) || `HTTP ${res.status}`);
   return data;
+}
+
+/* 触发整页重渲染的操作统一走这里：快照未保存的权重输入 → 重渲染 → 回填，
+   避免管理员改了一半的权重被静默丢弃 */
+async function reloadKeepWeights() {
+  const snap = snapWeights();
+  try {
+    await loadAll();
+  } finally {
+    restoreWeights(snap);
+  }
 }
 
 function showGate(msg) {
@@ -312,7 +339,7 @@ function renderOdds(d) {
   const nameOfSym = (sym) => {
     if (sym === "diamond") return "💎 钻石";
     const p = d.prizes.find((x) => x.id === sym);
-    return p ? `${p.emoji} ${p.name}` : sym;
+    return p ? `${esc(p.emoji)} ${esc(p.name)}` : esc(sym);
   };
   const syms = Object.keys(odds)
     .filter((k) => k.startsWith("triple_"))
@@ -349,8 +376,8 @@ function renderState(d) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td class="pname-cell" style="white-space:nowrap">
-        <span class="pname-show">${p.emoji} ${p.name}</span>
-        <button type="button" class="icon-btn ghost" data-act="edit" data-id="${p.id}" title="改名称 / emoji">✏️</button>
+        <span class="pname-show">${esc(p.emoji)} ${esc(p.name)}</span>
+        <button type="button" class="icon-btn ghost" data-act="edit" data-id="${esc(p.id)}" title="改名称 / emoji">✏️</button>
       </td>
       <td><input type="checkbox" class="grand-chk" data-act="grand" data-id="${p.id}" ${p.is_grand ? "checked" : ""} title="终极大奖：不进转盘，双钻自选与三钻超级大奖不含它"></td>
       <td class="drawn">${byPrize[p.id] || 0}</td>
@@ -422,8 +449,8 @@ async function loadAll() {
   const box = $("#history");
   box.innerHTML = h.records.length
     ? h.records.map((r) => `<div class="log-item ${r.result === "prize" ? "win" : ""}">
-        <span>${r.result === "prize" ? "🎁 " + r.prize_name : "🙏 谢谢参与"}</span>
-        <span class="ts">${(r.ts || "").replace("T", " ")}</span></div>`).join("")
+        <span>${r.result === "prize" ? "🎁 " + esc(r.prize_name) : "🙏 谢谢参与"}</span>
+        <span class="ts">${esc((r.ts || "").replace("T", " "))}</span></div>`).join("")
     : `<p class="note">还没有记录</p>`;
 }
 
@@ -516,15 +543,18 @@ async function putPrize(id, body) {
   } catch (e) {
     flash("#crud-msg", "失败：" + e.message, false);
   }
-  await loadAll();
-  restoreWeights(snap);
+  try {
+    await reloadKeepWeights();
+  } catch (e) {
+    flash("#crud-msg", "刷新失败：" + e.message, false);
+  }
 }
 
 function startEditName(td, p) {
   td.innerHTML = `
-    <input class="pe-emoji" value="${p.emoji}" maxlength="8" title="emoji" style="width:52px;padding:5px 6px">
-    <input class="pe-name" value="${p.name}" maxlength="30" title="名称" style="width:110px;padding:5px 6px">
-    <button type="button" class="icon-btn" data-act="edit-save" data-id="${p.id}">✓</button>
+    <input class="pe-emoji" value="${esc(p.emoji)}" maxlength="8" title="emoji" style="width:52px;padding:5px 6px">
+    <input class="pe-name" value="${esc(p.name)}" maxlength="30" title="名称" style="width:110px;padding:5px 6px">
+    <button type="button" class="icon-btn" data-act="edit-save" data-id="${esc(p.id)}">✓</button>
     <button type="button" class="icon-btn ghost" data-act="edit-cancel">✗</button>`;
   td.querySelector(".pe-name").focus();
 }
@@ -549,7 +579,7 @@ $("#prize-rows").addEventListener("click", async (e) => {
     return;
   }
   if (act === "edit-cancel") {
-    await loadAll();
+    await reloadKeepWeights();
     return;
   }
   if (act === "del") {
@@ -558,7 +588,7 @@ $("#prize-rows").addEventListener("click", async (e) => {
       try {
         await req(`/api/admin/prizes/${encodeURIComponent(p.id)}`, { method: "DELETE" });
         flash("#crud-msg", "已删除");
-        await loadAll();
+        await reloadKeepWeights();
       } catch (err) { flash("#crud-msg", "失败：" + err.message, false); }
     }
   }
@@ -601,7 +631,7 @@ $("#add-save").addEventListener("click", async () => {
     flash("#add-msg", "已新增（满库存起步）");
     $("#add-id").value = "";
     $("#add-name").value = "";
-    await loadAll();
+    await reloadKeepWeights();
   } catch (e) { flash("#add-msg", "失败：" + e.message, false); }
 });
 
@@ -685,7 +715,7 @@ $("#replenish").addEventListener("click", async () => {
   try {
     await req("/api/admin/replenish", { method: "POST" });
     flash("#w-msg", "已全部补货");
-    await loadAll();
+    await reloadKeepWeights();
   } catch (e) { flash("#w-msg", "失败：" + e.message, false); }
 });
 
@@ -694,7 +724,7 @@ $("#h-reset").addEventListener("click", async () => {
   try {
     await req("/api/admin/history/reset", { method: "POST" });
     flash("#h-msg", "已清空");
-    await loadAll();
+    await reloadKeepWeights();
   } catch (e) { flash("#h-msg", "失败：" + e.message, false); }
 });
 
@@ -705,8 +735,9 @@ $("#h-reset").addEventListener("click", async () => {
     $("#gate").hidden = true;
     $("#console").hidden = false;
     await loadAll();
-  } catch {
-    showGate("保存的令牌已失效，重新输入");
+  } catch (e) {
+    if (e.message === "unauthorized") showGate("保存的令牌已失效，重新输入");
+    else showGate("连不上服务（" + e.message + "），确认 uvicorn 是否在运行");
   }
 })();
 </script>

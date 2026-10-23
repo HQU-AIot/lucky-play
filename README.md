@@ -115,7 +115,7 @@ uv run uvicorn app.main:app --port 8666   # 启动
 ## 测试
 
 ```bash
-uv run --no-config pytest -q          # 56 项：概率数学 / API 集成 / 并发不超卖 / 抽干浸泡 / CRUD 与迁移
+uv run --no-config pytest -q          # 62 项：概率数学 / API 集成 / 并发不超卖 / 抽干浸泡 / CRUD 与迁移
 uv run scripts/prob_check.py          # 蒙特卡洛概率核查（走真实 HTTP API）
 ```
 

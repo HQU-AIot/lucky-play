@@ -75,6 +75,11 @@ def test_admin_weights_and_probability():
     lollipop = next(p for p in state["prizes"] if p["id"] == "lollipop")
     assert abs(lollipop["probability"] - 50 / total_w) < 1e-3
     client.put("/api/admin/dynamic", json={"enabled": True, "mode": "per_win"}, headers=TOKEN)
+    # 还原默认权重（本测试是文件内唯一改权重不还原的用例，-k 过滤时会泄漏）
+    client.put("/api/admin/weights", json={"weights": {
+        "lollipop": 30, "nailong": 20, "notebook": 15, "nfccard": 12,
+        "bookmark": 10, "shark": 8, "crawlpet": 6, "gamesir": 2,
+    }, "thanks_weight": 9}, headers=TOKEN)
 
 
 def test_admin_dynamic_mode_validation():

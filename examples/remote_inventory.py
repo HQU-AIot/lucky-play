@@ -2,7 +2,7 @@
 
 用法：把本文件拷到自己的包里改造，然后
 
-    LUCKY_INVENTORY=my_pkg.remote_inventory:RemoteInventory uv run uvicorn app.main:app
+    LUCKY_INVENTORY=my_pkg.remote_inventory:SyncingInventory uv run uvicorn app.main:app
 
 约定（完整契约见 app/inventory.py 的 Inventory 协议 docstring）：
 - 构造签名 ``__init__(self, db_path: Path)``（库存全在远端时可忽略该参数）；
@@ -11,8 +11,11 @@
 
 最省力的两条路：
 1. 抽奖编排仍用本项目的 SQLite Store（重抽循环、双钻凭据、流水审计都是现成的），
-   只在活动前后同步远端库存——见下方 SyncingInventory；
+   只在发放前后同步远端库存——见下方 SyncingInventory；
 2. 彻底自管：完整实现 Inventory 协议，抽奖事务逻辑参考 app/store.py。
+
+本地试跑（需把项目根加进 PYTHONPATH）：
+    PYTHONPATH=. uv run python examples/remote_inventory.py
 
 依赖 httpx 时自行安装（uv add httpx 或 uv pip install httpx）。
 """
@@ -25,10 +28,11 @@ from app.store import Store
 
 
 class SyncingInventory(Store):
-    """远端库存镜像：本地 SQLite 仍是抽奖事实源，每次变动同步推给远端后台。
+    """远端库存镜像：本地 SQLite 仍是抽奖事实源，抽奖发放同步推给远端后台。
 
-    适合"奖品发放要在自己的系统里留账"的场景：抽奖性能与离线能力不变，
-    远端宕机只影响同步（记日志重试），不影响现场抽奖。
+    注意：本示例只演示"发放类"同步（draw/draw_slot/choose_pending/replenish）；
+    管理端改库存的入口（set_stock/add_prize/update_prize/delete_prize）未覆写，
+    如需这些变动也同步远端，按同样模式覆写即可。
     """
 
     SYNC_URL = "https://your-inventory-api.example.com/lucky/sync"

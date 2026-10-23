@@ -145,5 +145,11 @@ def test_zero_stock_prize_invisible_everywhere():
 def _restore_default():
     client.put("/api/admin/weights", json={"weights": DEFAULT_WEIGHTS, "slot_weights": DEFAULT_WEIGHTS, "thanks_weight": 9}, headers=TOKEN)
     client.put("/api/admin/slot", json={"diamond_weight": 10, "grand_enabled": True, "jackpot_enabled": True}, headers=TOKEN)
+    # 还原种子总量（抽干轮次把 total 缩到 1-3，不还原会打崩同会话后续依赖
+    # 53/36/18 等默认总量的测试文件）
+    totals = {"lollipop": 53, "nailong": 36, "notebook": 18, "nfccard": 10,
+              "bookmark": 8, "shark": 6, "crawlpet": 4, "gamesir": 1}
+    for pid, total in totals.items():
+        client.put("/api/admin/stock", json={"id": pid, "remaining": total, "total": total}, headers=TOKEN)
     client.post("/api/admin/replenish", headers=TOKEN)
     client.post("/api/admin/history/reset", headers=TOKEN)

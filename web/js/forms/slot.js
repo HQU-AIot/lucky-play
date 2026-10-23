@@ -10,6 +10,9 @@
 import { easeOutCubic, rand, sleep } from "../easing.js";
 import { RESULT_AT } from "../music.js?v=10";
 import { api } from "../api.js?v=10";
+import { fx } from "../fx.js?v=10";
+
+const { esc } = fx;
 
 const CELLS = 24;
 const CELL_FALLBACK_H = 150;
@@ -127,12 +130,13 @@ export function mount(stage, ctx) {
     const symbols = reelSymbols();
     const byId = new Map(symbols.map((s) => [s.id, s]));
     // 三列落点 = 服务端回传的三轴符号（对对碰结果完全由服务端决定，前端只演）。
-    // 未知符号（如后台中途新增/开放奖品、旧页面轴面还没有它）兜底成中性"🎁 奖品"，
-    // 绝不能兜底成钻石——否则三同大奖会被误判成三钻超级大奖
+    // 符号缺失/长度异常时兜底成三格中性的"🎁 奖品"——绝不能兜底成钻石：
+    // 否则"三钻画面 + 谢谢参与结果"的自相矛盾会当场被观众质疑
+    const NEUTRAL = { id: "__unknown__", emoji: "🎁", name: "奖品" };
     const targets = (Array.isArray(result.symbols) && result.symbols.length === 3
       ? result.symbols
-      : [DIAMOND.id, DIAMOND.id, DIAMOND.id]
-    ).map((id) => byId.get(id) || { id, emoji: "🎁", name: "奖品" });
+      : [NEUTRAL.id, NEUTRAL.id, NEUTRAL.id]
+    ).map((id) => byId.get(id) || NEUTRAL);
     const isJackpot = targets.every((t) => t.id === DIAMOND.id) && result.result === "prize";
     // 三列首格（落点窗口）放各自的轴面符号；末尾再补一格同样的复制——
     // 滚动量恰为整圈，收尾减速时滑入视野的是这格复制而非空白，停定瞬间
@@ -258,7 +262,8 @@ export function mount(stage, ctx) {
         const card = document.createElement("button");
         card.type = "button";
         card.className = "chooser-prize";
-        card.innerHTML = `<span class="cp-emoji">${c.emoji}</span><span class="cp-name">${c.name}</span>`;
+        // choices 来自服务端奖品名（后台 CRUD/外部库存可写），拼 innerHTML 前转义
+        card.innerHTML = `<span class="cp-emoji">${esc(c.emoji)}</span><span class="cp-name">${esc(c.name)}</span>`;
         card.addEventListener("click", () => {
           ctx.fx.sound.click();
           if (selected === c.id) {
@@ -292,7 +297,9 @@ export function mount(stage, ctx) {
               resolve({ result: "thanks", prize: null, game: "slot" });
               return;
             }
-            if (chosen) {
+            // 仅当服务端明确说"这件刚被抽走"(409)才移除该卡；
+            // 500/网关错误等无关失败不能误删仍可选的奖品
+            if (chosen && res.status === 409) {
               cards.get(chosen)?.remove();
               cards.delete(chosen);
               if (selected === chosen) selected = null;
@@ -302,7 +309,9 @@ export function mount(stage, ctx) {
               grid.innerHTML = `<p class="chooser-empty">奖品都被抽完啦，收下谢谢参与吧</p>`;
               confirmBtn.textContent = "收下谢谢参与";
             }
-            confirmBtn.disabled = false;
+            // selected 已被清空且未走"收下谢谢参与"时必须保持禁用——
+            // 否则"空确认"会把一次性凭据按 null 记成谢谢参与，白丢双钻奖
+            confirmBtn.disabled = !exhausted && !selected;
             return;
           }
           ctx.fx.sound.pop();
@@ -310,7 +319,7 @@ export function mount(stage, ctx) {
           resolve(res);
         } catch {
           ctx.fx.toast("网络开小差了，再试一次");
-          confirmBtn.disabled = false;
+          confirmBtn.disabled = !exhausted && !selected;
         }
       };
     });
@@ -331,7 +340,13 @@ export function mount(stage, ctx) {
       // 待弹窗关闭后（或异常中断时）由 finally 统一复原
       const choice = await ctx.reveal(final);
       ctx.refresh();
-      if (choice === "again") setTimeout(() => btn.click(), 200);
+      if (choice === "again") {
+        // isConnected 复查：200ms 内切了玩法，按钮已游离——绝不能从旧节点
+        // 再发起一轮抽奖（会弹 document 级弹窗并真实扣库存）
+        againTimer = setTimeout(() => {
+          if (btn.isConnected) btn.click();
+        }, 200);
+      }
     } finally {
       // 任何异常下都恢复交互，避免拉杆/按钮永久禁用
       btn.disabled = false;
@@ -345,6 +360,8 @@ export function mount(stage, ctx) {
       running = false;
     }
   }
+
+  let againTimer = null;
 
   btn.addEventListener("click", start);
   lever.addEventListener("click", start);
@@ -362,6 +379,7 @@ export function mount(stage, ctx) {
 
   return {
     destroy() {
+      clearTimeout(againTimer);
       window.removeEventListener("lucky:prizes", onPrizes);
     },
   };

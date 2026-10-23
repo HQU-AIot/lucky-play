@@ -6,6 +6,13 @@ import { rand } from "./easing.js";
 const reducedMotion = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+/* HTML 转义：奖品名/emoji 可由后台或外部库存写入，拼 innerHTML 前必须过一遍 */
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[c]);
+}
+
 function cssVar(name) {
   return getComputedStyle(document.body).getPropertyValue(name).trim();
 }
@@ -350,6 +357,9 @@ const reveal = {
       if (e) e.n += 1;
       else parts.push({ ...p, n: 1 });
     }
+    // 单一奖品多件（三同×2）也要在弹窗里带 ×n——现场按弹窗发奖，漏显示件数会少发
+    const soloLabel = parts.length === 1 && parts[0].n > 1
+      ? `${parts[0].name} ×${parts[0].n}` : null;
     const label = parts.map((p) => (p.n > 1 ? `${p.name} ×${p.n}` : p.name)).join("、");
     const isJackpot =
       result.game === "slot" &&
@@ -361,15 +371,16 @@ const reveal = {
       win ? (isJackpot ? "💎 超级大奖" : parts.length > 1 ? "🎉 多重中奖" : "🎉 恭喜中奖") : "谢谢参与";
     document.getElementById("reveal-emoji").textContent = win ? (isJackpot ? "💎" : parts[0].emoji) : "🙏";
     document.getElementById("reveal-name").textContent = win
-      ? (isJackpot ? "全是你的！" : parts.length > 1 ? label : parts[0].name)
+      ? (isJackpot ? "全是你的！" : parts.length > 1 ? label : soloLabel || parts[0].name)
       : "下次一定";
-    // 多奖品（超级大奖/三同大奖）：方格排列奖品，与双钻自选框同款视觉
+    // 多奖品/多件（超级大奖、三同大奖、三同×2）：方格排列奖品，与双钻自选框同款视觉。
+    // 奖品名/emoji 可能来自后台 CRUD 或外部库存，拼 innerHTML 前必须转义（存储型 XSS）
     const gridEl = document.getElementById("reveal-grid");
     if (gridEl) {
-      if (win && parts.length > 1) {
+      if (win && (parts.length > 1 || (parts[0] && parts[0].n > 1))) {
         gridEl.hidden = false;
         gridEl.innerHTML = parts
-          .map((p) => `<span class="rg-chip"><span class="rg-emoji">${p.emoji}</span><span class="rg-name">${p.name}${p.n > 1 ? ` ×${p.n}` : ""}</span></span>`)
+          .map((p) => `<span class="rg-chip"><span class="rg-emoji">${esc(p.emoji)}</span><span class="rg-name">${esc(p.name)}${p.n > 1 ? ` ×${p.n}` : ""}</span></span>`)
           .join("");
       } else {
         gridEl.hidden = true;
@@ -381,7 +392,7 @@ const reveal = {
         ? "这些奖品全部归你，找管理员一次性领取～"
         : parts.length > 1
           ? `${label} 已收入囊中，记得找管理员领取～`
-          : `好运直达！「${parts[0].name}」已收入囊中，记得找管理员领取～`)
+          : `好运直达！「${soloLabel || parts[0].name}」已收入囊中，记得找管理员领取～`)
       : "差一点点而已——好运气正在打包，下一发就到。";
     this.mask.hidden = false;
     document.getElementById("reveal-close").focus();
@@ -424,7 +435,7 @@ function toast(msg) {
 }
 
 export const fx = {
-  sound, confetti, toast, reducedMotion,
+  sound, confetti, toast, reducedMotion, esc,
   init() {
     confetti.init();
     bgfx.init();

@@ -40,21 +40,28 @@ def effective_weights(
 
     库存为 0（含从未配置库存）的奖品有效权重恒为 0，不参与抽取；
     其基础权重是否转移给谢谢参与取决于模式。
+    mode=off 时等价于 dynamic_enabled=False（抽空即退出、不放给谢谢参与），
+    与模块 docstring 的承诺一致——外部 Inventory 实现传来的 (True, off)
+    也在本入口统一归一，不依赖调用方自觉。
+    remaining > total 属 Inventory 契约违约输入：按满库存钳制（ratio ≤ 1），
+    保证有效权重不超过 W、谢谢参与有效权重不为负。
     """
+    dynamic_on = dynamic_enabled and dynamic_mode != DYNAMIC_OFF
     prize_eff: dict[str, float] = {}
     bonus = 0.0
     for s in specs:
         if s.total > 0 and s.remaining > 0:
-            if dynamic_enabled and dynamic_mode == DYNAMIC_PER_WIN:
-                prize_eff[s.id] = s.base_weight * s.remaining / s.total
-                bonus += s.base_weight * (1 - s.remaining / s.total)
+            if dynamic_on and dynamic_mode == DYNAMIC_PER_WIN:
+                ratio = min(1.0, s.remaining / s.total)
+                prize_eff[s.id] = s.base_weight * ratio
+                bonus += s.base_weight * (1 - ratio)
             else:
                 prize_eff[s.id] = s.base_weight
         else:
             # 已抽空 / 零库存：无法再被抽中，权重整体让给谢谢参与。
             # per_win 的线性转移在 R=0 时恰好等于全额转移，两种模式语义连续。
             prize_eff[s.id] = 0.0
-            if dynamic_enabled:
+            if dynamic_on:
                 bonus += s.base_weight
     thanks_eff = thanks_weight + bonus
     return prize_eff, thanks_eff

@@ -65,7 +65,7 @@ LUCKY_PRIZES_JSON=/path/to/prizes.json uv run uvicorn app.main:app --port 8666
 [`app/inventory.py`](../app/inventory.py) 的 `Inventory` 协议，启动时动态装载：
 
 ```bash
-LUCKY_INVENTORY=my_pkg.remote_inventory:RemoteInventory uv run uvicorn app.main:app
+LUCKY_INVENTORY=my_pkg.remote_inventory:SyncingInventory uv run uvicorn app.main:app
 ```
 
 协议契约（完整签名见 `app/inventory.py` docstring）：

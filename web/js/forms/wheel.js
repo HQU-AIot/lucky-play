@@ -32,6 +32,7 @@ export function mount(stage, ctx) {
   let items = ctx.items().filter((p) => !p.is_grand); // 转盘奖池不含终极大奖（产品规则，服务端同步排除）
   let rotation = rand(0, TAU);
   let spinning = false;
+  let againTimer = null;
   let offscreen = null;
   let size = 0;
   let dpr = 1;
@@ -210,10 +211,17 @@ export function mount(stage, ctx) {
     const result = await ctx.draw();
     if (!result) return;
     await spin(result);
+    // 旋转期间 onPrizes 被跳过的奖池变更在此补齐重绘（本轮动画已按旧扇区演完）
+    items = ctx.items().filter((p) => !p.is_grand);
+    renderStatic();
     const choice = await ctx.reveal(result);
     ctx.refresh();
     if (choice === "again") {
-      setTimeout(() => hub.click(), 200);
+      // isConnected 复查：200ms 内切了玩法，旧 hub 已游离——不能从旧节点
+      // 再发起一轮抽奖（会弹 document 级弹窗并真实扣库存）
+      againTimer = setTimeout(() => {
+        if (hub.isConnected) hub.click();
+      }, 200);
     }
   });
 
@@ -222,6 +230,9 @@ export function mount(stage, ctx) {
   ro.observe(hub); // 窄屏媒体查询切换钮的固定/比例尺寸时不经 wrap 变化，需单独触发重绘
   const onTheme = () => renderStatic();
   const onPrizes = () => {
+    // 旋转中绝不能重建扇区划分（本轮落点角按旧 items 数量锁定，中途重建
+    // 会让指针落点扇区与已宣布结果错位）；转完在 spin 收尾处统一重绘
+    if (spinning) return;
     items = ctx.items().filter((p) => !p.is_grand);
     renderStatic();
   };
@@ -231,6 +242,7 @@ export function mount(stage, ctx) {
 
   return {
     destroy() {
+      clearTimeout(againTimer);
       ro.disconnect();
       window.removeEventListener("lucky:theme", onTheme);
       window.removeEventListener("lucky:prizes", onPrizes);

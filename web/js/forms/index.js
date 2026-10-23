@@ -1,7 +1,7 @@
 /* 形式注册表：id ↔ 名称/图标/描述 + 挂载器 */
 
-import * as wheel from "./wheel.js?v=14";
-import * as slot from "./slot.js?v=12";
+import * as wheel from "./wheel.js?v=15";
+import * as slot from "./slot.js?v=13";
 
 export const FORMS = {
   wheel: {

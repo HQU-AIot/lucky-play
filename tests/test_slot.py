@@ -54,6 +54,12 @@ def _slot_draw():
 def _restore():
     client.put("/api/admin/weights", json={"weights": DEFAULT_WEIGHTS, "slot_weights": DEFAULT_WEIGHTS, "thanks_weight": 9}, headers=TOKEN)
     client.put("/api/admin/slot", json={"diamond_weight": 10, "grand_enabled": True, "jackpot_enabled": True}, headers=TOKEN)
+    # 还原种子总量（部分测试会把 total 改成 200 等，泄漏会击穿依赖 53/36 等
+    # 硬编码总量的断言——按默认清单重置）
+    DEFAULT_TOTALS = {"lollipop": 53, "nailong": 36, "notebook": 18, "nfccard": 10,
+                      "bookmark": 8, "shark": 6, "crawlpet": 4, GAMESIR: 1}
+    for pid, total in DEFAULT_TOTALS.items():
+        client.put("/api/admin/stock", json={"id": pid, "remaining": total, "total": total}, headers=TOKEN)
     client.post("/api/admin/replenish", headers=TOKEN)
 
 

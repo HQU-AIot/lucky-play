@@ -50,10 +50,21 @@ async function loadPrizes() {
   }
 }
 
+async function refreshData() {
+  // 先 meta 后 prizes：老虎机轴面重建挂在 lucky:prizes 上且要读 meta 里的
+  // 大奖开关——并发竞速会让"旧/空 meta + 新奖池"的组合随机出现
+  await loadMeta();
+  await loadPrizes();
+}
+
 /* ---------- 抽奖上下文（交给各形式使用） ---------- */
 
 const ctx = {
-  reduced: fx.reducedMotion(),
+  // 改为 getter：与 music.js 的实时读取口径一致，系统"减弱动态"偏好
+  // 中途切换时动画时长与音乐时间轴不脱节
+  get reduced() {
+    return fx.reducedMotion();
+  },
   fx,
   items() {
     return [...state.prizes.map((p) => ({ ...p })), THANKS_ITEM];
@@ -94,8 +105,7 @@ const ctx = {
     return choice;
   },
   refresh() {
-    loadPrizes();
-    loadMeta(); // 每轮结束重拉：后台改大奖/超级大奖开关或奖池，已打开的页面下一轮即联动
+    refreshData(); // 每轮结束重拉：后台改大奖/超级大奖开关或奖池，已打开的页面下一轮即联动
   },
 };
 
@@ -208,15 +218,16 @@ function init() {
     if (e.code !== "Space" || e.repeat || e.altKey || e.ctrlKey || e.metaKey) return;
     if (e.defaultPrevented) return; // 拉杆等自带空格处理的部件已在 target 阶段接手，别叠加触发
     if (!$("#overlay-theme").hidden || !$("#overlay-form").hidden) return; // 浮层打开时不抢空格
+    // 焦点在按钮上时（含弹窗的"收下好礼/再抽一次"）交给原生空格激活，
+    // 不能劫持——键盘用户聚焦"收下好礼"按空格，预期是关窗而不是再抽一轮
+    const el = document.activeElement;
+    if (el && ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(el.tagName)) return;
     const mask = $("#reveal");
     if (mask && !mask.hidden) {
       e.preventDefault();
       $("#reveal-again").click();
       return;
     }
-    const el = document.activeElement;
-    // 输入类不拦截；按钮聚焦时交给原生空格点击，避免双触发
-    if (el && ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(el.tagName)) return;
     const start = [...$("#stage").querySelectorAll("button")].find(
       (b) => !b.disabled && b.offsetParent !== null &&
         ["wheel-hub", "slot-btn"].some((c) => b.classList.contains(c))
@@ -256,8 +267,7 @@ function init() {
 
   applyTheme(state.theme, false);
   applyForm(state.form);
-  loadMeta();
-  loadPrizes();
+  refreshData();
 }
 
 init();

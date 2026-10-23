@@ -36,7 +36,6 @@ atexit.register(shutil.rmtree, _TMPDIR, ignore_errors=True)
 
 from app.lottery import (  # noqa: E402
     DYNAMIC_DEPLETED,
-    DYNAMIC_OFF,
     DYNAMIC_PER_WIN,
     PrizeSpec,
     effective_weights,
@@ -273,6 +272,8 @@ def phase_store_chain(rng: random.Random) -> None:
 # ---------------------------------------------------------------- 4. HTTP API 层
 
 def phase_api() -> None:
+    # 令牌尊重环境变量：公网部署按 README 换了 LUCKY_ADMIN_TOKEN 时脚本同样可用
+    token = {"X-Admin-Token": os.environ.get("LUCKY_ADMIN_TOKEN", "123456")}
     print("\n[4] HTTP API 层（TestClient：/api/draw 扣库存链路 + /api/sample 无副作用采样）")
     from fastapi.testclient import TestClient
 
@@ -285,18 +286,17 @@ def phase_api() -> None:
     # -- sample 无副作用 --
     before = client.get("/api/prizes").json()
     draws_before = client.get("/api/admin/history?limit=1",
-                              headers={"X-Admin-Token": "123456"}).json()
+                              headers=token).json()
     client.get("/api/sample?count=20")
     after = client.get("/api/prizes").json()
     draws_after = client.get("/api/admin/history?limit=1",
-                             headers={"X-Admin-Token": "123456"}).json()
+                             headers=token).json()
     if before != after or draws_before != draws_after:
         fail("/api/sample 产生了副作用（库存或流水变化）")
     else:
         print("  · /api/sample 无副作用：库存与流水零变化")
 
     # -- sample 分布（无扣减 → 状态恒定，直接平稳检验）--
-    rng = random.Random(20260930)
     n_req = int(1500 * SCALE)
     counts: dict[str, int] = {}
     for _ in range(n_req):
@@ -352,10 +352,17 @@ def phase_api() -> None:
 
 
 def _live_specs(client) -> tuple[list[PrizeSpec], float, bool, str]:
-    """从 admin 接口读真实配置构造状态，避免脚本内硬编码权重。"""
-    st = client.get("/api/admin/state", headers={"X-Admin-Token": "123456"}).json()
+    """从 admin 接口读真实配置构造状态，避免脚本内硬编码权重。
+
+    剔除 is_grand 大奖：/api/draw（转盘）与 /api/sample 的奖池都不含大奖，
+    理论表必须同口径，否则大奖一列实测恒 0 必然误报 z 偏离。"""
+    st = client.get(
+        "/api/admin/state",
+        headers={"X-Admin-Token": os.environ.get("LUCKY_ADMIN_TOKEN", "123456")},
+    ).json()
     specs = [PrizeSpec(p["id"], p["name"], float(p["base_weight"]),
-                       int(p["total_stock"]), int(p["remaining"])) for p in st["prizes"]]
+                       int(p["total_stock"]), int(p["remaining"]))
+             for p in st["prizes"] if not p.get("is_grand")]
     return specs, float(st["thanks_weight"]), bool(st["dynamic_enabled"]), str(st["dynamic_mode"])
 
 
