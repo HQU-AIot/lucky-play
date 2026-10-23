@@ -1,8 +1,11 @@
 [project]
 name = "lucky-play"
-version = "0.1.0"
-description = "多形式 × 多主题抽奖系统（转盘/九宫格/盲盒/翻牌 × 6 套皮肤，含国庆主题）"
+version = "1.0.0"
+description = "多形式 × 多主题抽奖系统：大转盘/老虎机 × 6 套主题，服务端定结果、并发不超卖、奖池全可编辑"
 requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "HQU-AIot" }]
 dependencies = [
     "fastapi>=0.115",
     "uvicorn>=0.30",
