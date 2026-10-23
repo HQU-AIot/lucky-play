@@ -2,6 +2,10 @@
 
 [![CI](https://github.com/HQU-AIot/lucky-play/actions/workflows/ci.yml/badge.svg)](https://github.com/HQU-AIot/lucky-play/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+![Python](https://img.shields.io/badge/python-3.11%2B-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
+![Offline](https://img.shields.io/badge/%E9%9B%B6%E5%A4%96%E9%83%A8%E7%BD%91%E7%BB%9C%E5%8F%AF%E7%94%A8-8bc34a)
 
 为线下活动准备的可自托管抽奖站：**2 种抽奖玩法 × 6 套视觉主题**，带概率后台、
 奖品/库存全可编辑、谢谢参与动态概率转移。零外部资源（无 CDN/字体/图片素材），
@@ -10,6 +14,22 @@
 | 大转盘（国庆盛典主题） | 老虎机（拉杆启动） |
 | :---: | :---: |
 | ![](docs/images/wheel-national.jpg) | ![](docs/images/slot-lever.jpg) |
+
+## 目录
+
+- [亮点](#亮点)
+- [快速开始](#快速开始)
+- [玩法与主题](#玩法与主题)
+- [配置（环境变量）](#配置环境变量)
+- [换奖品 / 接入自己的库存](#换奖品--接入自己的库存)
+- [接口](#接口)
+- [谢谢参与 · 动态概率](#谢谢参与--动态概率)
+- [部署与安全](#部署与安全)
+- [测试](#测试)
+- [已知限制与路线图](#已知限制与路线图)
+- [作者与维护状态](#作者与维护状态)
+- [参与贡献](#参与贡献)
+- [License](#license)
 
 ## 亮点
 
@@ -132,7 +152,50 @@ docs/       设计 / 交接 / 测试 / 定制指南
 scripts/    launch.sh 一键启动 · package.sh 打包 · prob_check.py 概率验证
 ```
 
+## 已知限制与路线图
+
+已知限制：
+
+- **单进程部署假定**：抽奖原子性靠 `RLock + BEGIN IMMEDIATE`、双钻凭据在内存——不要开多进程实例指向同一个数据库文件；
+- **GUI 无自动化测试**：62 项 pytest 覆盖全部后端逻辑（概率/并发/迁移/CRUD），前端界面靠手工清单验证（[docs/TESTING.md](docs/TESTING.md)）；
+- **背景音乐版权**：`web/assets/lucky-song.mp3` 为翻唱曲目，不随 MIT 许可授权分发，替换为你自己的 BGM（同名放入 `web/assets/`）即可；
+- **默认管理令牌 123456**：仅限内网/可信场合，公网部署必须设置 `LUCKY_ADMIN_TOKEN`；
+- 暂无英文 README。
+
+路线图：
+
+- [ ] 英文 README
+- [ ] 前端冒烟自动化（Playwright 跑通"开抽→弹窗→再抽"主链路）
+- [ ] 活动报表一键导出（CSV/xlsx：抽奖流水 × 奖品消耗交叉表）
+- [ ] 奖品图片字段（当前用 emoji，扩展列 + 前端渲染三处）
+- [ ] 多管理员令牌与操作审计日志
+
+## 作者与维护状态
+
+- 作者：[glong888](https://github.com/glong888)（[HQU-AIoT](https://github.com/HQU-AIot)）
+- 维护状态：**可用（usable）**——62 项自动化测试全绿、CI 保障；已完整支撑过一次真实线下活动（2026-09-30 国庆游园会，280+ 条抽奖记录、并发抽奖不超卖）
+- 适用场景：社团 / 班级 / 公司线下活动的单机抽奖站（笔记本或 kiosk 即可，断网可用）
+- 运行环境：Windows / macOS / Linux；Python 3.11+（推荐 [uv](https://docs.astral.sh/uv/)）
+- 反馈：欢迎在 [Issues](https://github.com/HQU-AIot/lucky-play/issues) 提交问题与需求；接入外部库存遇到契约疑问请附 `docs/CUSTOMIZE.md` 对应章节
+
+## 参与贡献
+
+欢迎提 Issue 或 PR，尤其是：
+
+- 新的主题皮肤（`web/css/themes.css` 按既有 token 结构加一套）
+- 新玩法挂载器（`web/js/forms/` 注册表模式：一个 `mount(stage, ctx)` 导出即可接入）
+- 概率/并发边界的新测试用例
+- 文档勘误与使用反馈
+
+提交前请确认：
+
+1. `uv run --no-config pytest -q` 全部通过；
+2. 不包含真实活动数据、个人信息或内部部署细节（`data/` 已被 gitignore，请勿绕过）；
+3. 改动涉及接口行为时同步更新 README 的 API 表与相关文档。
+
 ## License
 
 [MIT](LICENSE)。背景音乐 `web/assets/lucky-song.mp3` 为翻唱曲目，仅本项目原活动内部使用，
 不随 MIT 许可授权分发；替换为你自己的 BGM（同名放入 `web/assets/`）即可。
+
+如果这个项目对你的活动有帮助，欢迎 Star ⭐
