@@ -2,13 +2,15 @@
 __pycache__/
 *.pyc
 .pytest_cache/
-data/*.db
-data/*.db-journal
-data/*.db-wal
-data/*.db-shm
-uv.lock
+# data/ 是本地运行数据（SQLite 库 + 活动记录导出），一律不入库
+data/
 .DS_Store
 gui-test-screenshots/
+
+# 本地工具与私有备份，不入库
+.zcodeignore
+.zcode/
+local-backup/
 
 # 音乐原文件已复制到 web/assets/lucky-song.mp3，源目录不入库
 music/

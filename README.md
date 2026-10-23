@@ -65,21 +65,7 @@ uv run uvicorn app.main:app --port 8666   # 启动
 ## 数据与部署
 
 - SQLite 单文件（`data/lucky.db`，环境变量 `LUCKY_DB` 覆盖），抽奖在 `BEGIN IMMEDIATE` 事务内扣库存，并发不超卖（有测试保障）。
-- 改奖品清单/默认权重：编辑 `app/store.py` 的 `DEFAULT_PRIZES` 后重启即自动补插新增奖品（幂等迁移，不动已调好的权重/库存；删除奖品需删库重建）。转盘/老虎机按奖品数自适应布局（当前 8 奖品 + 谢谢参与 = 9 项）；后台仅能改权重与库存。
 - 公网部署务必设置 `LUCKY_ADMIN_TOKEN` 环境变量替换默认令牌。
-
-### 云部署（已停用）
-
-2026-09-29 起不再使用云服务器，仅本地运行。京东云上的服务已关闭：`lucky.service` 已 stop + disable、`loginctl disable-linger` 已关（不会开机自启），公网 8666 已不可达；服务器上的代码与数据库仍保留在 `/home/admin/lucky-play`，未删除。
-
-如需恢复线上部署，`scripts/deploy.sh` 仍可用（SSH 别名 `jd_admin`）：
-
-```bash
-bash scripts/deploy.sh                     # 上传代码 + 装依赖 + 重启服务（可重复执行）
-ssh jd_admin 'loginctl enable-linger admin && systemctl --user start lucky.service'
-```
-
-注意：公网访问需在京东云控制台安全组放行 TCP 8666；公网部署务必设置 `LUCKY_ADMIN_TOKEN` 替换默认令牌（服务器侧命令：`systemctl --user status/restart lucky.service`、`journalctl --user -u lucky.service -f`）；服务器数据库独立，恢复后先登 `/admin` 核对库存，活动前点"全部补货"。
 
 ## 测试
 
