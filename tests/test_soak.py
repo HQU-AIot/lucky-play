@@ -109,7 +109,7 @@ def test_drain_all_stock_three_rounds():
         # 会让"抽干后必谢谢"断言带 ~6% 固有翻车率；手柄可抽出已有专门测试覆盖）
         ws = {**DEFAULT_WEIGHTS, "gamesir": 0}
         client.put("/api/admin/weights", json={"weights": DEFAULT_WEIGHTS, "slot_weights": ws, "thanks_weight": 0}, headers=TOKEN)
-        client.put("/api/admin/slot", json={"diamond_weight": 15, "gamesir_enabled": True, "jackpot_enabled": True}, headers=TOKEN)
+        client.put("/api/admin/slot", json={"diamond_weight": 15, "grand_enabled": True, "jackpot_enabled": True}, headers=TOKEN)
         client.post("/api/admin/history/reset", headers=TOKEN)
         # 每轮随机总量（1-3 件）逼出边界；手柄固定 1 件（轴面权重本轮置 0 避免干扰）
         # 与"三同手柄+任选"都建立在手柄仅 1 件之上）
@@ -126,7 +126,7 @@ def test_drain_all_stock_three_rounds():
 def test_zero_stock_prize_invisible_everywhere():
     """零库存奖品：不上轴面、不进自选清单、不被发放（用户点名的场景）。"""
     client.put("/api/admin/weights", json={"weights": DEFAULT_WEIGHTS, "slot_weights": DEFAULT_WEIGHTS, "thanks_weight": 0}, headers=TOKEN)
-    client.put("/api/admin/slot", json={"diamond_weight": 10, "gamesir_enabled": True, "jackpot_enabled": True}, headers=TOKEN)
+    client.put("/api/admin/slot", json={"diamond_weight": 10, "grand_enabled": True, "jackpot_enabled": True}, headers=TOKEN)
     total = _prizes()["bookmark"]["total"]
     client.put("/api/admin/stock", json={"id": "bookmark", "remaining": 0, "total": total}, headers=TOKEN)
     for _ in range(150):
@@ -144,6 +144,6 @@ def test_zero_stock_prize_invisible_everywhere():
 
 def _restore_default():
     client.put("/api/admin/weights", json={"weights": DEFAULT_WEIGHTS, "slot_weights": DEFAULT_WEIGHTS, "thanks_weight": 9}, headers=TOKEN)
-    client.put("/api/admin/slot", json={"diamond_weight": 10, "gamesir_enabled": True, "jackpot_enabled": True}, headers=TOKEN)
+    client.put("/api/admin/slot", json={"diamond_weight": 10, "grand_enabled": True, "jackpot_enabled": True}, headers=TOKEN)
     client.post("/api/admin/replenish", headers=TOKEN)
     client.post("/api/admin/history/reset", headers=TOKEN)

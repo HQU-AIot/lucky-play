@@ -1,4 +1,4 @@
-"""SQLite 存储层。
+"""SQLite 存储层（Inventory 协议的默认实现，见 app/inventory.py）。
 
 单进程部署，用 RLock + BEGIN IMMEDIATE 保证抽奖扣库存的原子性，
 并发请求不会把同一件奖品发出去两次。
@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import json
 import secrets
 import sqlite3
 import threading
@@ -27,13 +28,17 @@ DEFAULT_PRIZES = [
     ("gamesir", "盖世小鸡手柄", "🎮", 2, 1),
 ]
 
+# 种子清单里属于"终极大奖"的奖品：不进转盘、双钻自选与三钻超级大奖都不含它。
+# 运行时的同一语义由 prizes.is_grand 列承载，这里是播种/迁移的初始值。
+DEFAULT_GRAND_IDS = frozenset({"gamesir"})
+
 DEFAULT_CONFIG = {
     "thanks_weight": "9",
     "dynamic_enabled": "1",
     "dynamic_mode": DYNAMIC_PER_WIN,
     "win_stop_at": "5.5",
     "slot_diamond_weight": "10",
-    "slot_gamesir_enabled": "1",
+    "slot_grand_enabled": "1",
     "slot_jackpot_enabled": "1",
     "event_name": "幸运抽奖",
     "event_date": "2026-09-30",
@@ -45,10 +50,55 @@ DEFAULT_ADMIN_TOKEN = "123456"
 CONFIG_KEYS = set(DEFAULT_CONFIG)
 
 
+def load_seed(prizes_file: Path | str | None) -> list[tuple]:
+    """解析播种清单：给定 JSON 文件则用之，否则用 DEFAULT_PRIZES。
+
+    返回统一 7 元组列表 (id, name, emoji, base_weight, slot_weight, total, is_grand)。
+    JSON 条目字段：id/name/emoji/base_weight/total_stock 必填（emoji 可省略），
+    slot_weight、is_grand 可省（分别默认等于 base_weight、False）。
+    """
+    if not prizes_file:
+        return [
+            (pid, name, emoji, w, w, stock, pid in DEFAULT_GRAND_IDS)
+            for pid, name, emoji, w, stock in DEFAULT_PRIZES
+        ]
+    path = Path(prizes_file)
+    if not path.is_file():
+        raise FileNotFoundError(f"LUCKY_PRIZES_JSON 指向的文件不存在: {path}")
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"奖品清单 JSON 解析失败（{path}）: {exc}") from exc
+    if not isinstance(raw, list) or not raw:
+        raise ValueError(f"奖品清单 JSON 应为非空数组（{path}）")
+    items: list[tuple] = []
+    for i, ent in enumerate(raw):
+        if not isinstance(ent, dict):
+            raise ValueError(f"奖品清单第 {i + 1} 项应为对象: {ent!r}")
+        pid = ent.get("id")
+        name = ent.get("name")
+        if not isinstance(pid, str) or not (1 <= len(pid) <= 32):
+            raise ValueError(f"奖品清单第 {i + 1} 项 id 非法（1-32 字符）: {pid!r}")
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError(f"奖品清单第 {i + 1} 项 name 非法: {name!r}")
+        emoji = ent.get("emoji") or "🎁"
+        base_w = ent.get("base_weight", 0)
+        slot_w = ent.get("slot_weight", base_w)
+        total = ent.get("total_stock", 0)
+        if not all(isinstance(v, (int, float)) and v >= 0 for v in (base_w, slot_w)):
+            raise ValueError(f"奖品 {pid} 的权重须为非负数值")
+        if not isinstance(total, int) or total < 0:
+            raise ValueError(f"奖品 {pid} 的 total_stock 须为非负整数")
+        items.append((pid, name.strip(), emoji, float(base_w), float(slot_w),
+                      total, bool(ent.get("is_grand", False))))
+    return items
+
+
 class Store:
-    def __init__(self, db_path: Path):
+    def __init__(self, db_path: Path, prizes_file: Path | str | None = None):
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self._seed = load_seed(prizes_file)
         self._lock = threading.RLock()
         # 双钻自选的一次性凭据 {token: 签发时刻}；确认/过期后移除。
         # 单进程部署，内存即可——凭据丢失的最坏结果是这轮双钻作废，不涉库存。
@@ -96,22 +146,48 @@ class Store:
                 self._conn.execute(
                     "UPDATE prizes SET slot_weight = base_weight WHERE slot_weight IS NULL"
                 )
-                # 播种 + 幂等迁移：空库按清单顺序全量播种；已有库只补默认清单里
+                # v3 迁移：终极大奖标志列（语义见 DEFAULT_GRAND_IDS 注释）。
+                # 仅在列刚创建时执行一次性补标；此后管理员经 CRUD 改的标志不被覆盖
+                if "is_grand" not in prize_cols:
+                    self._conn.execute(
+                        "ALTER TABLE prizes ADD COLUMN is_grand INTEGER NOT NULL DEFAULT 0"
+                    )
+                    seed_grand = {p[0] for p in self._seed if p[6]}
+                    if seed_grand:
+                        marks = ",".join("?" for _ in seed_grand)
+                        self._conn.execute(
+                            f"UPDATE prizes SET is_grand = 1 WHERE id IN ({marks})",
+                            tuple(seed_grand),
+                        )
+                # v3 配置键迁移：slot_gamesir_enabled → slot_grand_enabled（值原样保留）
+                old = self._conn.execute(
+                    "SELECT value FROM config WHERE key = 'slot_gamesir_enabled'"
+                ).fetchone()
+                if old is not None:
+                    self._conn.execute(
+                        "INSERT INTO config (key, value) VALUES ('slot_grand_enabled', ?)"
+                        " ON CONFLICT(key) DO NOTHING",
+                        (old["value"],),
+                    )
+                    self._conn.execute("DELETE FROM config WHERE key = 'slot_gamesir_enabled'")
+                # 播种 + 幂等迁移：空库按清单顺序全量播种；已有库只补清单里
                 # 新增的奖品，sort 追加到末尾顺延（不与已有项撞号，展示顺序稳定）。
-                # 已有奖品的权重/库存一概不动——现场调过的参数保持原样。
+                # 已有奖品的权重/库存/标志一概不动——现场调过的参数保持原样。
                 existing = {r["id"] for r in self._conn.execute("SELECT id FROM prizes")}
                 next_sort = self._conn.execute(
                     "SELECT COALESCE(MAX(sort) + 1, 0) FROM prizes"
                 ).fetchone()[0]
-                for i, (pid, name, emoji, weight, stock) in enumerate(DEFAULT_PRIZES):
+                for i, (pid, name, emoji, base_w, slot_w, stock, is_grand) in enumerate(self._seed):
                     if pid in existing:
                         continue
                     sort = i if not existing else next_sort
                     next_sort += 1
                     self._conn.execute(
                         "INSERT INTO prizes (id, name, emoji, sort, base_weight,"
-                        " slot_weight, total_stock, remaining) VALUES (?,?,?,?,?,?,?,?)",
-                        (pid, name, emoji, sort, weight, weight, stock, stock),
+                        " slot_weight, total_stock, remaining, is_grand)"
+                        " VALUES (?,?,?,?,?,?,?,?,?)",
+                        (pid, name, emoji, sort, base_w, slot_w, stock, stock,
+                         1 if is_grand else 0),
                     )
                 for key, value in DEFAULT_CONFIG.items():
                     self._conn.execute(
@@ -235,21 +311,21 @@ class Store:
         rng,
         prize_eff: dict[str, float],
         diamond_weight: float,
-        gamesir_enabled: bool,
+        grand_enabled: bool,
         jackpot_enabled: bool,
     ) -> dict:
         """老虎机三轴对对碰：同一事务里抽符号 → 定奖 → 逐件扣减 → 逐件落记录。
 
-        规则（产品口径）：
+        规则（产品口径，"大奖"= prizes.is_grand 标记的终极大奖）：
         - 三轴全不同 = 没抽到（谢谢参与）；
         - 两同 = 该奖品 ×1（库存不足 2 时的三同也只发 1）；
         - 三同普通奖品 = 该奖品 ×2；
-        - 三同手柄 = 手柄 ×1 + 任选一件其它奖品（系统随机）；
-        - 三同钻石 = 超级大奖：除手柄外每类奖品各 ×1（仅发仍有库存的类别），
+        - 三同大奖 = 大奖 ×1 + 任选一件其它奖品（系统随机）；
+        - 三同钻石 = 超级大奖：除大奖外每类奖品各 ×1（仅发仍有库存的类别），
           超级大奖开关关闭时该组合重抽；
-        - 两同钻石 = 中奖者现场自选：本事务只圈出可选清单（有库存的非手柄
+        - 两同钻石 = 中奖者现场自选：本事务只圈出可选清单（有库存的非大奖
           奖品）并签发一次性凭据、零扣减零流水，等 choose_pending() 确认；
-        - 两同 = ×1（手柄单件库存恰好发 1 件；2026-09-30 按需求取消"两同手柄重抽"）。
+        - 两同 = ×1（大奖单件库存恰好发 1 件；2026-09-30 按需求取消"两同大奖重抽"）。
         除双钻自选外，其余"任选"都在事务内由系统随机决定并逐件写流水。
         """
         from .lottery import DIAMOND, slot_outcome, slot_pool, slot_spin
@@ -258,14 +334,17 @@ class Store:
             self._conn.execute("BEGIN IMMEDIATE")
             try:
                 rows = self._conn.execute(
-                    "SELECT id, name, emoji, remaining, total_stock FROM prizes"
+                    "SELECT id, name, emoji, remaining, total_stock, is_grand FROM prizes"
                 ).fetchall()
                 stock = {r["id"]: dict(r) for r in rows}
+                grand_ids = {pid for pid, row in stock.items() if row["is_grand"]}
                 # 池内按事务内库存复筛（与 store.draw 的 usable_eff 口径一致：
                 # 快照后恰被并发抽空的奖品不再出现在轴面组合里）
                 pool = {
                     pid: w
-                    for pid, w in slot_pool(prize_eff, diamond_weight, gamesir_enabled).items()
+                    for pid, w in slot_pool(
+                        prize_eff, diamond_weight, grand_ids, grand_enabled
+                    ).items()
                     if pid == DIAMOND or stock.get(pid, {}).get("remaining", 0) > 0
                 }
                 ts = datetime.now().astimezone().isoformat(timespec="seconds")
@@ -284,12 +363,12 @@ class Store:
                     if kind == "pair":
                         if sym == DIAMOND:
                             # 双钻 = 中奖者现场自选：这里只圈出可选清单（有库存的
-                            # 非手柄奖品，与权重无关）并签发一次性凭据，等玩家在
+                            # 非大奖奖品，与权重无关）并签发一次性凭据，等玩家在
                             # 自选框里点「确认领取」时由 choose_pending() 扣库存
                             avail = [
                                 pid
                                 for pid, row in stock.items()
-                                if pid != "gamesir" and row["remaining"] > 0
+                                if not row["is_grand"] and row["remaining"] > 0
                             ]
                             if avail:
                                 pending_token = secrets.token_urlsafe(16)
@@ -298,7 +377,7 @@ class Store:
                                     for pid in avail
                                 ]
                             break
-                        # 两同 = ×1（含手柄：单件库存恰好发这 1 件，2026-09-30 按需求取消重抽）
+                        # 两同 = ×1（含大奖：单件库存恰好发这 1 件，2026-09-30 按需求取消重抽）
                         wins = [sym] * min(1, int(stock[sym]["remaining"]))
                         result = "prize"
                         break
@@ -306,24 +385,24 @@ class Store:
                     if sym == DIAMOND:
                         if not jackpot_enabled:
                             continue
-                        # 超级大奖：除手柄外每类有库存的奖品各 ×1（与权重无关）
+                        # 超级大奖：除大奖外每类有库存的奖品各 ×1（与权重无关）
                         wins = [
                             pid
                             for pid, row in stock.items()
-                            if pid != "gamesir" and row["remaining"] > 0
+                            if not row["is_grand"] and row["remaining"] > 0
                         ]
                         if wins:
                             result = "prize"
                         break
-                    if sym == "gamesir":
+                    if stock[sym]["is_grand"]:
                         other = [
                             pid
                             for pid, row in stock.items()
-                            if pid != "gamesir"
+                            if not row["is_grand"]
                             and pid != DIAMOND
                             and row["remaining"] > 0
                         ]
-                        wins = ["gamesir"] + ([rng.choice(other)] if other else [])
+                        wins = [sym] + ([rng.choice(other)] if other else [])
                         result = "prize"
                         break
                     wins = [sym] * min(2, int(stock[sym]["remaining"]))
@@ -417,11 +496,12 @@ class Store:
                     del self._pending[token]  # COMMIT 成功后才消费：异常路径下库存/流水/凭据始终一致
                     return {"result": "thanks", "prize": None, "prizes": [], "game": "slot"}
                 row = self._conn.execute(
-                    "SELECT id, name, emoji, remaining, total_stock FROM prizes WHERE id = ?",
+                    "SELECT id, name, emoji, remaining, total_stock, is_grand FROM prizes"
+                    " WHERE id = ?",
                     (prize_id,),
                 ).fetchone()
-                if row is None or prize_id == "gamesir" or row["remaining"] <= 0:
-                    # 不消费凭据：玩家换一件仍可确认
+                if row is None or row["is_grand"] or row["remaining"] <= 0:
+                    # 不消费凭据：玩家换一件仍可确认（大奖不走自选，与池规则一致）
                     self._conn.execute("COMMIT")
                     return {"error": "手慢了，这件奖品刚被抽走，换一件吧"}
                 self._conn.execute(
@@ -510,6 +590,112 @@ class Store:
             row = cur.fetchone()
             self._conn.commit()
         return dict(row) if row else None
+
+    # ---- 奖品 CRUD（后台可编辑奖池） ----
+
+    def add_prize(
+        self,
+        pid: str,
+        name: str,
+        emoji: str,
+        base_weight: float,
+        slot_weight: float | None,
+        total_stock: int,
+        is_grand: bool,
+    ) -> dict:
+        """新增奖品（追加到展示顺序末尾，满库存起步）。id 重复抛 ValueError。"""
+        with self._lock:
+            self._conn.execute("BEGIN IMMEDIATE")
+            try:
+                dup = self._conn.execute(
+                    "SELECT 1 FROM prizes WHERE id = ?", (pid,)
+                ).fetchone()
+                if dup:
+                    raise ValueError(f"奖品 id 已存在: {pid}")
+                next_sort = self._conn.execute(
+                    "SELECT COALESCE(MAX(sort) + 1, 0) FROM prizes"
+                ).fetchone()[0]
+                slot_w = base_weight if slot_weight is None else slot_weight
+                self._conn.execute(
+                    "INSERT INTO prizes (id, name, emoji, sort, base_weight, slot_weight,"
+                    " total_stock, remaining, is_grand) VALUES (?,?,?,?,?,?,?,?,?)",
+                    (pid, name, emoji, next_sort, float(base_weight), float(slot_w),
+                     int(total_stock), int(total_stock), 1 if is_grand else 0),
+                )
+                self._conn.execute("COMMIT")
+                return next(p for p in self.list_prizes() if p["id"] == pid)
+            except Exception:
+                if self._conn.in_transaction:
+                    self._conn.execute("ROLLBACK")
+                raise
+
+    def update_prize(
+        self,
+        prize_id: str,
+        *,
+        name: str | None = None,
+        emoji: str | None = None,
+        is_grand: bool | None = None,
+        total_stock: int | None = None,
+    ) -> dict | None:
+        """改名/emoji/大奖标志/总量。总量缩小时剩余库存钳制到新总量以内。"""
+        with self._lock:
+            self._conn.execute("BEGIN IMMEDIATE")
+            try:
+                row = self._conn.execute(
+                    "SELECT * FROM prizes WHERE id = ?", (prize_id,)
+                ).fetchone()
+                if row is None:
+                    self._conn.execute("COMMIT")
+                    return None
+                new_total = int(total_stock) if total_stock is not None else int(row["total_stock"])
+                new_remaining = min(int(row["remaining"]), new_total)
+                self._conn.execute(
+                    "UPDATE prizes SET name = ?, emoji = ?, is_grand = ?,"
+                    " total_stock = ?, remaining = ? WHERE id = ?",
+                    (
+                        name if name is not None else row["name"],
+                        emoji if emoji is not None else row["emoji"],
+                        1 if (is_grand if is_grand is not None else row["is_grand"]) else 0,
+                        new_total,
+                        new_remaining,
+                        prize_id,
+                    ),
+                )
+                self._conn.execute("COMMIT")
+                return next(p for p in self.list_prizes() if p["id"] == prize_id)
+            except Exception:
+                if self._conn.in_transaction:
+                    self._conn.execute("ROLLBACK")
+                raise
+
+    def delete_prize(self, prize_id: str) -> dict | None:
+        """删除奖品。返回 None = 不存在；有中奖流水或已发出过抛 ValueError——
+        此时删行会留下指向虚空的历史记录，引导管理员把权重/库存调 0 使其退出奖池。"""
+        with self._lock:
+            self._conn.execute("BEGIN IMMEDIATE")
+            try:
+                row = self._conn.execute(
+                    "SELECT remaining, total_stock FROM prizes WHERE id = ?", (prize_id,)
+                ).fetchone()
+                if row is None:
+                    self._conn.execute("COMMIT")
+                    return None
+                drawn = self._conn.execute(
+                    "SELECT COUNT(*) AS n FROM draws WHERE prize_id = ?", (prize_id,)
+                ).fetchone()["n"]
+                if drawn or int(row["remaining"]) < int(row["total_stock"]):
+                    raise ValueError(
+                        "该奖品已有中奖记录（或已发出过），删除会让历史记录失去指向；"
+                        "如只需它退出奖池，把两套权重与库存都调 0 即可"
+                    )
+                self._conn.execute("DELETE FROM prizes WHERE id = ?", (prize_id,))
+                self._conn.execute("COMMIT")
+                return {"ok": True, "id": prize_id}
+            except Exception:
+                if self._conn.in_transaction:
+                    self._conn.execute("ROLLBACK")
+                raise
 
     def reset_history(self) -> None:
         with self._lock:

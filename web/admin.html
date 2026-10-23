@@ -27,6 +27,12 @@
     display: flex; align-items: center; gap: 7px;
   }
   .chip b { color: var(--ink); font-size: 16px; font-variant-numeric: tabular-nums; }
+  /* 奖品行内小按钮（编辑/删除）与大奖复选框 */
+  .icon-btn { padding: 4px 9px; font-size: 12.5px; }
+  .grand-chk { width: 16px; height: 16px; accent-color: var(--warn); cursor: pointer; }
+  #prize-add { border-top: 1px dashed var(--line); margin-top: 14px; padding-top: 14px; }
+  #prize-add .field { min-width: 110px; }
+  #prize-add .field.narrow { min-width: 84px; flex: 0 1 110px; }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-bottom: 18px; overflow-x: auto; }
   .card h2 { font-size: 15px; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .card h2 .hint { font-weight: 400; color: var(--dim); font-size: 12px; }
@@ -123,14 +129,14 @@
     <div class="chip" id="sum-stock">🎁 库存合计 <b>–</b></div>
     <div class="chip" id="sum-draws">🎯 累计抽奖 <b>–</b></div>
     <div class="chip" id="sum-thanks">🙏 谢谢参与 <b>–</b></div>
-    <div class="chip" id="sum-slot">🎰 手柄 <b>–</b> · 超级大奖 <b>–</b></div>
+    <div class="chip" id="sum-slot">🎰 终极大奖 <b>–</b> · 超级大奖 <b>–</b></div>
   </div>
 
   <div class="card">
-    <h2>🎁 奖品与库存 <span class="hint">转盘 / 老虎机各自一套权重分别调节；转盘永远抽不到手柄 · 库存改动即时生效</span></h2>
+    <h2>🎁 奖品与库存 <span class="hint">名称/大奖标志/总量可直接改 · 转盘与老虎机各自一套权重 · 转盘永远抽不到终极大奖 · 库存改动即时生效</span></h2>
     <table>
       <thead><tr>
-        <th>奖品</th><th>已抽出</th><th>转盘权重</th><th>转盘概率</th><th>老虎机权重</th><th>老虎机概率</th><th>库存（剩余 / 总量）</th>
+        <th>奖品</th><th title="终极大奖：不进转盘、双钻自选与三钻超级大奖都不含它">大奖</th><th>已抽出</th><th>转盘权重</th><th>转盘概率</th><th>老虎机权重</th><th>老虎机概率</th><th>库存（剩余 / 总量）</th><th>操作</th>
       </tr></thead>
       <tbody id="prize-rows"></tbody>
     </table>
@@ -138,6 +144,21 @@
     <div class="row" style="margin-top:14px">
       <button id="w-save">保存权重</button><span class="msg" id="w-msg"></span>
       <button id="replenish" class="ghost">全部补货</button>
+      <button id="add-toggle" class="ghost">＋ 新增奖品</button>
+      <span class="msg" id="crud-msg"></span>
+    </div>
+    <div id="prize-add" hidden>
+      <div class="row">
+        <div class="field narrow"><label>id（字母/数字/-/_）</label><input id="add-id" placeholder="coupon"></div>
+        <div class="field"><label>名称</label><input id="add-name" placeholder="优惠券"></div>
+        <div class="field narrow"><label>emoji</label><input id="add-emoji" value="🎁" maxlength="8"></div>
+        <div class="field narrow"><label>转盘权重</label><input id="add-bw" type="number" min="0" step="0.5" value="10"></div>
+        <div class="field narrow"><label>老虎机权重<br><span class="hint">（空=同转盘）</span></label><input id="add-sw" type="number" min="0" step="0.5" placeholder="同转盘"></div>
+        <div class="field narrow"><label>总量</label><input id="add-total" type="number" min="0" step="1" value="10"></div>
+        <div class="field narrow"><label>终极大奖</label><label style="margin:8px 0 0"><input type="checkbox" class="grand-chk" id="add-grand"></label></div>
+        <button id="add-save">新增</button><span class="msg" id="add-msg"></span>
+      </div>
+      <p class="note">新增的奖品以满库存起步、展示顺序排在末尾；把「终极大奖」勾上即适用"不进转盘、只能老虎机三同/对子出"的规则。</p>
     </div>
   </div>
 
@@ -150,14 +171,14 @@
       </div>
       <button id="slot-dw-save">保存钻石权重</button><span class="msg" id="slot-dw-msg"></span>
     </div>
-    <p class="note">钻石代替谢谢参与上轴：<b>两钻</b> = 中奖者现场在自选框里挑一件非手柄奖品（点选→确认才扣库存）；<b>三钻</b> = 超级大奖（除手柄外每类仍有库存的奖品各一份）。</p>
+    <p class="note">钻石代替谢谢参与上轴：<b>两钻</b> = 中奖者现场在自选框里挑一件非大奖奖品（点选→确认才扣库存）；<b>三钻</b> = 超级大奖（除大奖外每类仍有库存的奖品各一份）。</p>
     <div class="row" style="margin-top:16px; align-items:flex-start">
       <div class="tgl-box" style="min-width:240px">
-        <button type="button" class="toggle off" id="slot-gamesir" aria-pressed="false">
-          <span class="t-dot"></span>🎮 手柄可被老虎机抽出<b class="t-state">关</b>
+        <button type="button" class="toggle off" id="slot-grand" aria-pressed="false">
+          <span class="t-dot"></span>🏆 终极大奖可被老虎机抽出<b class="t-state">关</b>
         </button>
-        <p class="note">手柄进老虎机奖池（转盘侧永远不含手柄）。人多的场合再打开。</p>
-        <span class="msg" id="slot-gamesir-msg"></span>
+        <p class="note">终极大奖进老虎机奖池（转盘侧永远不含大奖）。人多的场合再打开。</p>
+        <span class="msg" id="slot-grand-msg"></span>
       </div>
       <div class="tgl-box" style="min-width:240px">
         <button type="button" class="toggle off" id="slot-jackpot" aria-pressed="false">
@@ -260,7 +281,7 @@ function setToggle(btn, on) {
 }
 
 function renderToggles(d) {
-  setToggle($("#slot-gamesir"), d.slot.gamesir_enabled);
+  setToggle($("#slot-grand"), d.slot.grand_enabled);
   setToggle($("#slot-jackpot"), d.slot.jackpot_enabled);
   setToggle($("#dyn-toggle"), d.dynamic_enabled);
 }
@@ -327,7 +348,11 @@ function renderState(d) {
   for (const p of d.prizes) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${p.emoji} ${p.name}</td>
+      <td class="pname-cell" style="white-space:nowrap">
+        <span class="pname-show">${p.emoji} ${p.name}</span>
+        <button type="button" class="icon-btn ghost" data-act="edit" data-id="${p.id}" title="改名称 / emoji">✏️</button>
+      </td>
+      <td><input type="checkbox" class="grand-chk" data-act="grand" data-id="${p.id}" ${p.is_grand ? "checked" : ""} title="终极大奖：不进转盘，双钻自选与三钻超级大奖不含它"></td>
       <td class="drawn">${byPrize[p.id] || 0}</td>
       <td><input type="number" min="0" step="0.5" class="w-in" data-id="${p.id}" value="${p.base_weight}"></td>
       <td><div style="display:flex;align-items:center">
@@ -344,12 +369,14 @@ function renderState(d) {
         <input type="number" min="0" step="1" class="stock-in st-total" value="${p.total_stock}" title="总量">
         <button type="button" class="st-btn" data-act="inc" title="剩余加一">+</button>
         <button type="button" class="ghost st-full" title="剩余补满到总量">补满</button>
-      </div></td>`;
+      </div></td>
+      <td><button type="button" class="icon-btn danger" data-act="del" data-id="${p.id}" title="删除奖品（已有中奖记录的奖品不能删）">删除</button></td>`;
     tbody.appendChild(tr);
   }
   const thanksTr = document.createElement("tr");
   thanksTr.innerHTML = `
     <td title="老虎机轴上由 💎 钻石代替谢谢参与参与连线，故老虎机无此项权重">🙏 谢谢参与</td>
+    <td>—</td>
     <td class="drawn">${byPrize["thanks"] || 0}</td>
     <td><input type="number" min="0" step="0.5" id="tw-row" value="${d.thanks_weight}"></td>
     <td><div style="display:flex;align-items:center">
@@ -358,7 +385,8 @@ function renderState(d) {
       ${bonusW > 0.0005 ? `<span class="prob-note" title="动态转移：奖品消耗的库存把权重让给了谢谢参与">含转移 +${bonusW.toFixed(2)} 权重</span>` : ""}
     </div></td>
     <td colspan="2">—</td>
-    <td>不限量</td>`;
+    <td>不限量</td>
+    <td>—</td>`;
   tbody.appendChild(thanksTr);
 
   // 动态转移解释：这是"权重 0 但概率不为 0"的来源，必须讲清
@@ -384,7 +412,7 @@ function renderState(d) {
   $("#sum-draws").innerHTML = `🎯 累计抽奖 <b>${d.stats.total_draws}</b>`;
   $("#sum-thanks").innerHTML = `🙏 谢谢参与 <b>${pct(d.thanks_probability, 1)}</b>`;
   $("#sum-slot").innerHTML =
-    `🎰 手柄 <b>${d.slot.gamesir_enabled ? "开" : "关"}</b> · 超级大奖 <b>${d.slot.jackpot_enabled ? "开" : "关"}</b>`;
+    `🎰 终极大奖 <b>${d.slot.grand_enabled ? "开" : "关"}</b> · 超级大奖 <b>${d.slot.jackpot_enabled ? "开" : "关"}</b>`;
 }
 
 async function loadAll() {
@@ -474,8 +502,108 @@ async function saveSlotFlag(key, msgId) {
   }
 }
 
-$("#slot-gamesir").addEventListener("click", () => saveSlotFlag("gamesir_enabled", "#slot-gamesir-msg"));
+$("#slot-grand").addEventListener("click", () => saveSlotFlag("grand_enabled", "#slot-grand-msg"));
 $("#slot-jackpot").addEventListener("click", () => saveSlotFlag("jackpot_enabled", "#slot-jackpot-msg"));
+
+// ---- 奖品 CRUD：改名/emoji（行内编辑）、大奖标志、删除、新增 ----
+async function putPrize(id, body) {
+  const snap = snapWeights();
+  try {
+    await req(`/api/admin/prizes/${encodeURIComponent(id)}`, {
+      method: "PUT", body: JSON.stringify(body),
+    });
+    flash("#crud-msg", "已保存");
+  } catch (e) {
+    flash("#crud-msg", "失败：" + e.message, false);
+  }
+  await loadAll();
+  restoreWeights(snap);
+}
+
+function startEditName(td, p) {
+  td.innerHTML = `
+    <input class="pe-emoji" value="${p.emoji}" maxlength="8" title="emoji" style="width:52px;padding:5px 6px">
+    <input class="pe-name" value="${p.name}" maxlength="30" title="名称" style="width:110px;padding:5px 6px">
+    <button type="button" class="icon-btn" data-act="edit-save" data-id="${p.id}">✓</button>
+    <button type="button" class="icon-btn ghost" data-act="edit-cancel">✗</button>`;
+  td.querySelector(".pe-name").focus();
+}
+
+$("#prize-rows").addEventListener("click", async (e) => {
+  const btn = e.target.closest("[data-act]");
+  if (!btn) return;
+  const act = btn.dataset.act;
+  if (act === "edit") {
+    const p = (stateData && stateData.prizes.find((x) => x.id === btn.dataset.id));
+    if (p) startEditName(btn.closest("td"), p);
+    return;
+  }
+  if (act === "edit-save") {
+    const td = btn.closest("td");
+    const body = {
+      name: td.querySelector(".pe-name").value.trim(),
+      emoji: td.querySelector(".pe-emoji").value.trim() || "🎁",
+    };
+    if (!body.name) { flash("#crud-msg", "名称不能为空", false); return; }
+    await putPrize(btn.dataset.id, body);
+    return;
+  }
+  if (act === "edit-cancel") {
+    await loadAll();
+    return;
+  }
+  if (act === "del") {
+    const p = (stateData && stateData.prizes.find((x) => x.id === btn.dataset.id));
+    if (p && confirm(`确定删除奖品「${p.emoji} ${p.name}」？已有中奖记录的奖品不能删除。`)) {
+      try {
+        await req(`/api/admin/prizes/${encodeURIComponent(p.id)}`, { method: "DELETE" });
+        flash("#crud-msg", "已删除");
+        await loadAll();
+      } catch (err) { flash("#crud-msg", "失败：" + err.message, false); }
+    }
+  }
+});
+
+$("#prize-rows").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && e.target.classList.contains("pe-name")) {
+    e.target.closest("td").querySelector("[data-act='edit-save']").click();
+  }
+});
+
+$("#add-toggle").addEventListener("click", () => {
+  const box = $("#prize-add");
+  box.hidden = !box.hidden;
+  if (!box.hidden) $("#add-id").focus();
+});
+
+$("#add-save").addEventListener("click", async () => {
+  const id = $("#add-id").value.trim();
+  const name = $("#add-name").value.trim();
+  if (!/^[a-z0-9_-]{1,32}$/.test(id)) {
+    flash("#add-msg", "id 须为 1-32 位小写字母/数字/-/_", false);
+    return;
+  }
+  if (!name) { flash("#add-msg", "名称不能为空", false); return; }
+  const bw = Number($("#add-bw").value);
+  const swRaw = $("#add-sw").value;
+  const total = Math.max(0, Math.round(Number($("#add-total").value) || 0));
+  if (!isFinite(bw) || bw < 0 || bw > 100000) { flash("#add-msg", "转盘权重须为 0 - 100000", false); return; }
+  if (swRaw !== "" && (!isFinite(Number(swRaw)) || Number(swRaw) < 0 || Number(swRaw) > 100000)) {
+    flash("#add-msg", "老虎机权重须为 0 - 100000", false);
+    return;
+  }
+  try {
+    await req("/api/admin/prizes", { method: "POST", body: JSON.stringify({
+      id, name, emoji: $("#add-emoji").value.trim() || "🎁",
+      base_weight: bw, slot_weight: swRaw === "" ? null : Number(swRaw),
+      total_stock: total, is_grand: $("#add-grand").checked,
+    })});
+    flash("#add-msg", "已新增（满库存起步）");
+    $("#add-id").value = "";
+    $("#add-name").value = "";
+    await loadAll();
+  } catch (e) { flash("#add-msg", "失败：" + e.message, false); }
+});
 
 $("#w-save").addEventListener("click", async () => {
   try {
@@ -544,6 +672,10 @@ $("#prize-rows").addEventListener("click", (e) => {
 });
 
 $("#prize-rows").addEventListener("change", (e) => {
+  if (e.target.classList.contains("grand-chk")) {
+    putPrize(e.target.dataset.id, { is_grand: e.target.checked });
+    return;
+  }
   if (e.target.classList.contains("stock-in")) {
     queueStock(e.target.closest(".stock-ctl"), e.target.classList.contains("st-total") ? "total" : "remaining");
   }

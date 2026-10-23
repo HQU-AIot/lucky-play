@@ -29,7 +29,7 @@ export function mount(stage, ctx) {
   const hub = stage.querySelector(".wheel-hub");
   const g2d = canvas.getContext("2d");
 
-  let items = ctx.items().filter((p) => p.id !== "gamesir"); // 转盘奖池不含手柄（产品规则，服务端同步排除）
+  let items = ctx.items().filter((p) => !p.is_grand); // 转盘奖池不含终极大奖（产品规则，服务端同步排除）
   let rotation = rand(0, TAU);
   let spinning = false;
   let offscreen = null;
@@ -222,7 +222,7 @@ export function mount(stage, ctx) {
   ro.observe(hub); // 窄屏媒体查询切换钮的固定/比例尺寸时不经 wrap 变化，需单独触发重绘
   const onTheme = () => renderStatic();
   const onPrizes = () => {
-    items = ctx.items().filter((p) => p.id !== "gamesir");
+    items = ctx.items().filter((p) => !p.is_grand);
     renderStatic();
   };
   window.addEventListener("lucky:theme", onTheme);

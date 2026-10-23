@@ -363,7 +363,7 @@ const reveal = {
     document.getElementById("reveal-name").textContent = win
       ? (isJackpot ? "全是你的！" : parts.length > 1 ? label : parts[0].name)
       : "下次一定";
-    // 多奖品（超级大奖/三同手柄）：方格排列奖品，与双钻自选框同款视觉
+    // 多奖品（超级大奖/三同大奖）：方格排列奖品，与双钻自选框同款视觉
     const gridEl = document.getElementById("reveal-grid");
     if (gridEl) {
       if (win && parts.length > 1) {

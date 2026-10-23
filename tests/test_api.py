@@ -194,7 +194,7 @@ def test_concurrent_no_oversell():
         headers=TOKEN,
     )
     assert r.status_code == 200
-    client.put("/api/admin/slot", json={"diamond_weight": 0, "gamesir_enabled": True}, headers=TOKEN)
+    client.put("/api/admin/slot", json={"diamond_weight": 0, "grand_enabled": True}, headers=TOKEN)
     client.put("/api/admin/stock", json={"id": GAMESIR, "remaining": 1, "total": 1}, headers=TOKEN)
     client.post("/api/admin/history/reset", headers=TOKEN)
 

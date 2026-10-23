@@ -99,22 +99,25 @@ def probability_table(
 
 # ---- 老虎机（三轴对对碰） ----
 
-DIAMOND = "diamond"  # 钻石符号：代替"谢谢参与"上轴；两钻=任选非手柄奖品，三钻=超级大奖
+DIAMOND = "diamond"  # 钻石符号：代替"谢谢参与"上轴；两钻=任选非大奖奖品，三钻=超级大奖
 
 
 def slot_pool(
     prize_eff: dict[str, float],
     diamond_weight: float,
-    gamesir_enabled: bool,
+    grand_ids: frozenset[str] | set[str],
+    grand_enabled: bool,
 ) -> dict[str, float]:
     """老虎机单轴符号权重表：库存有效的奖品 + 钻石。
 
-    手柄开关关闭时手柄不入池（转盘侧永远不含手柄，与此开关无关）。
+    grand_ids = 标记为"终极大奖"的奖品 id 集合；大奖开关关闭时它们不入池
+    （转盘侧永远不含大奖，与此开关无关）。是否属于大奖由 prizes.is_grand 决定，
+    不再认任何写死的奖品 id。
     """
     pool = {
         pid: w
         for pid, w in prize_eff.items()
-        if w > 0 and not (pid == "gamesir" and not gamesir_enabled)
+        if w > 0 and (grand_enabled or pid not in grand_ids)
     }
     if diamond_weight > 0:
         pool[DIAMOND] = diamond_weight
@@ -145,7 +148,7 @@ def slot_odds(pool: dict[str, float]) -> dict[str, float]:
     """三轴独立假设下各结果的理论概率（0-1），供后台展示。
 
     返回 {"triple_<sym>", "pair_<sym>", "mixed"}。注意：引擎对被禁用组合
-    （手柄对/三钻当超级大奖关闭）会重抽，实际分布略偏向其余组合。
+    （大奖对/三钻当超级大奖关闭）会重抽，实际分布略偏向其余组合。
     """
     total = sum(pool.values())
     if total <= 0:

@@ -53,17 +53,17 @@ def _slot_draw():
 
 def _restore():
     client.put("/api/admin/weights", json={"weights": DEFAULT_WEIGHTS, "slot_weights": DEFAULT_WEIGHTS, "thanks_weight": 9}, headers=TOKEN)
-    client.put("/api/admin/slot", json={"diamond_weight": 10, "gamesir_enabled": True, "jackpot_enabled": True}, headers=TOKEN)
+    client.put("/api/admin/slot", json={"diamond_weight": 10, "grand_enabled": True, "jackpot_enabled": True}, headers=TOKEN)
     client.post("/api/admin/replenish", headers=TOKEN)
 
 
 def test_admin_slot_config_and_odds():
     """后台老虎机配置读写：钻石权重/双开关落库，赔率表齐全且归一。"""
-    r = client.put("/api/admin/slot", json={"diamond_weight": 25, "gamesir_enabled": False, "jackpot_enabled": False}, headers=TOKEN)
+    r = client.put("/api/admin/slot", json={"diamond_weight": 25, "grand_enabled": False, "jackpot_enabled": False}, headers=TOKEN)
     assert r.status_code == 200
     state = client.get("/api/admin/state", headers=TOKEN).json()
     assert state["slot"]["diamond_weight"] == 25
-    assert state["slot"]["gamesir_enabled"] is False
+    assert state["slot"]["grand_enabled"] is False
     assert state["slot"]["jackpot_enabled"] is False
     odds = state["slot"]["odds"]
     assert abs(sum(odds.values()) - 1.0) < 1e-3
@@ -71,11 +71,11 @@ def test_admin_slot_config_and_odds():
     assert "triple_diamond" in odds and "pair_diamond" in odds
     # 公开 meta 同步开关状态（前端据此决定轴上是否放手柄）
     meta = client.get("/api/meta").json()
-    assert meta["slot"]["gamesir_enabled"] is False
+    assert meta["slot"]["grand_enabled"] is False
     assert meta["slot"]["jackpot_enabled"] is False
     _restore()
     meta = client.get("/api/meta").json()
-    assert meta["slot"]["gamesir_enabled"] is True and meta["slot"]["jackpot_enabled"] is True
+    assert meta["slot"]["grand_enabled"] is True and meta["slot"]["jackpot_enabled"] is True
 
 
 def test_wheel_never_grants_gamesir():
@@ -146,7 +146,7 @@ def test_triple_gamesir_grants_gamesir_plus_random_other(monkeypatch):
 
 def test_pair_gamesir_pays_single_unit(monkeypatch):
     _rig_weights({GAMESIR: 1, "crawlpet": 0}, 0)
-    client.put("/api/admin/slot", json={"diamond_weight": 30, "gamesir_enabled": True, "jackpot_enabled": False}, headers=TOKEN)
+    client.put("/api/admin/slot", json={"diamond_weight": 30, "grand_enabled": True, "jackpot_enabled": False}, headers=TOKEN)
     client.put("/api/admin/stock", json={"id": "crawlpet", "remaining": 0, "total": 4}, headers=TOKEN)
     client.put("/api/admin/stock", json={"id": GAMESIR, "remaining": 1, "total": 1}, headers=TOKEN)
     # 脚本化 rng 强制第一抽为"两同手柄 + 钻石"，确定性覆盖两同手柄发奖分支
@@ -164,7 +164,7 @@ def test_pair_gamesir_pays_single_unit(monkeypatch):
 def test_jackpot_three_diamonds_one_of_each():
     """三同钻石 = 超级大奖：除手柄外每类有库存的奖品各 ×1（此处把爬宠清零验证"仅发有库存类别"）。"""
     _rig_weights({}, 0)
-    client.put("/api/admin/slot", json={"diamond_weight": 50, "gamesir_enabled": True, "jackpot_enabled": True}, headers=TOKEN)
+    client.put("/api/admin/slot", json={"diamond_weight": 50, "grand_enabled": True, "jackpot_enabled": True}, headers=TOKEN)
     client.put("/api/admin/stock", json={"id": "crawlpet", "remaining": 0, "total": 4}, headers=TOKEN)
     client.post("/api/admin/history/reset", headers=TOKEN)  # 计数只含本次超级大奖
     r = _slot_draw()

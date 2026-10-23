@@ -2,7 +2,7 @@
    高速模糊、逐格 tick；每列停定回弹，全部停齐时机身震动 + 顶灯跑马。
    对对碰规则（服务端定结果，前端只负责演）：
    三轴全不同 = 没抽到；两同 = 该奖品 ×1；三同 = 该奖品 ×2；
-   三同手柄 = 手柄 + 任选奖品；三同钻石 💎 = 超级大奖（每类奖品各一）；
+   三同终极大奖 = 大奖 + 任选奖品；三同钻石 💎 = 超级大奖（每类奖品各一）；
    两同钻石 = 弹自选框让中奖者挑一件（点选→确认两步防误触，确认才扣库存）。
    轴面图案 = 奖品 + 💎（代替谢谢参与）。
    时长对齐音乐：末轮停定回弹后在 RESULT_AT=5s"停"齐开奖。 */
@@ -55,11 +55,11 @@ export function mount(stage, ctx) {
   const reels = windows.map((w) => w.querySelector(".slot-reel"));
   let running = false;
 
-  /* 轴面符号表：全部奖品（手柄按后台开关进出）+ 钻石（代替谢谢参与参与连线） */
+  /* 轴面符号表：全部奖品（终极大奖按后台开关进出）+ 钻石（代替谢谢参与参与连线） */
   function reelSymbols() {
     const cfg = ctx.meta().slot || {};
     const prizes = ctx.items().filter(
-      (p) => p.id !== "thanks" && (cfg.gamesir_enabled !== false || p.id !== "gamesir")
+      (p) => p.id !== "thanks" && (cfg.grand_enabled !== false || !p.is_grand)
     );
     return [...prizes, DIAMOND];
   }
@@ -127,8 +127,8 @@ export function mount(stage, ctx) {
     const symbols = reelSymbols();
     const byId = new Map(symbols.map((s) => [s.id, s]));
     // 三列落点 = 服务端回传的三轴符号（对对碰结果完全由服务端决定，前端只演）。
-    // 未知符号（如后台中途开手柄、旧页面轴面还没有它）兜底成中性"🎁 奖品"，
-    // 绝不能兜底成钻石——否则三同手柄会被误判成三钻超级大奖
+    // 未知符号（如后台中途新增/开放奖品、旧页面轴面还没有它）兜底成中性"🎁 奖品"，
+    // 绝不能兜底成钻石——否则三同大奖会被误判成三钻超级大奖
     const targets = (Array.isArray(result.symbols) && result.symbols.length === 3
       ? result.symbols
       : [DIAMOND.id, DIAMOND.id, DIAMOND.id]

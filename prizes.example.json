@@ -1,0 +1,29 @@
+[
+  {
+    "id": "lollipop",
+    "name": "不二家棒棒糖",
+    "emoji": "🍭",
+    "base_weight": 30,
+    "slot_weight": 30,
+    "total_stock": 53,
+    "is_grand": false
+  },
+  {
+    "id": "notebook",
+    "name": "口袋笔记本",
+    "emoji": "📓",
+    "base_weight": 15,
+    "slot_weight": 15,
+    "total_stock": 18,
+    "is_grand": false
+  },
+  {
+    "id": "console",
+    "name": "游戏手柄",
+    "emoji": "🎮",
+    "base_weight": 2,
+    "slot_weight": 2,
+    "total_stock": 1,
+    "is_grand": true
+  }
+]
